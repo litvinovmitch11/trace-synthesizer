@@ -1,0 +1,28 @@
+[project]
+name = "trace-synthesizer"
+version = "0.1.0"
+description = "TODO: add description"
+authors = [
+    {name = "Michael Litvinov", email = "litvinovmitch11@gmail.com"}
+]
+license = "Apache-2.0"
+readme = "README.md"
+requires-python = ">=3.12"
+
+dependencies = [
+    "graphviz (>=0.21,<0.22)",
+    "capstone (>=5.0.6,<6.0.0)",
+    "pyelftools (>=0.32,<0.33)",
+    "click (>=8.3.1,<9.0.0)"
+]
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.group.dev.dependencies]
+black = ">=25.11.0,<26.0.0"
+isort = ">=7.0.0,<8.0.0"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
