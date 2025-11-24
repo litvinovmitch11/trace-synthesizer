@@ -12,6 +12,14 @@ configure:
 build: configure
 	cmake --build $(BUILD_DIR) -j$(NPROC)
 
+# TODO: just for debug
+get-trace:
+	$(BUILD_DIR)/_deps/dynamorio_pkg-src/bin64/drrun -c $(BUILD_DIR)/src/tracer/libtracer.so -- ./data/cpp_dummy_files/main
+
+# TODO: just for debug
+get-graph:
+	poetry run python -m tools_py.visualize_cfg ./data/cpp_dummy_files/main trace.log execution_graph
+
 install:
 	poetry install
 
@@ -20,4 +28,4 @@ format:
 	poetry run isort .
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)/*
