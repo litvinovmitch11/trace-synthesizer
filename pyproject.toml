@@ -11,9 +11,7 @@ requires-python = ">=3.12"
 
 dependencies = [
     "graphviz (>=0.21,<0.22)",
-    "capstone (>=5.0.6,<6.0.0)",
-    "pyelftools (>=0.32,<0.33)",
-    "click (>=8.3.1,<9.0.0)"
+    "r2pipe (>=1.9.6,<2.0.0)",
 ]
 
 [tool.poetry]

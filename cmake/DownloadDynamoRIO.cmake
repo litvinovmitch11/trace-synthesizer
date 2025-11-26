@@ -35,6 +35,5 @@ function(add_dynamorio_client target_name)
     )
     set_target_properties(${target_name} PROPERTIES
         LINK_FLAGS "-Wl,-rpath,'$ORIGIN/${DR_REL_PATH}'"
-        BUILD_WITH_INSTALL_RPATH TRUE
     )
 endfunction()
