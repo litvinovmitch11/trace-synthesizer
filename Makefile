@@ -14,6 +14,8 @@ NPROC=8
 
 all: configure build install format tidy build-dummy get-traces generate-cfgs
 
+process: build-dummy get-traces generate-cfgs
+
 configure:
 	cmake -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) -DCMAKE_C_COMPILER=$(C_COMPILER) -DCMAKE_CXX_COMPILER=$(CXX_COMPILER)
 
@@ -52,7 +54,13 @@ format:
 	poetry run black tools_py/
 	poetry run isort tools_py/
 
-clean:
-	rm -rf $(BUILD_DIR)/* $(DUMMY_BUILD_DIR)/* $(TRACES_DIR)/* 
+clean: clean-build clean-dummy clean-traces
 
-.PHONY: all configure build install tidy format build-dummy get-traces generate-cfgs clean
+clean-build:
+	rm -rf $(BUILD_DIR)/* 
+clean-dummy:
+	rm -rf $(DUMMY_BUILD_DIR)/* 
+clean-traces:
+	rm -rf $(TRACES_DIR)/* 
+
+.PHONY: all process configure build install tidy format build-dummy get-traces generate-cfgs clean clean-build clean-dummy clean-traces
