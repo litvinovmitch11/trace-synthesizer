@@ -1,0 +1,33 @@
+.
+├── cmake
+│   └── DownloadDynamoRIO.cmake
+├── CMakeLists.txt
+├── data
+│   ├── build
+│   │   └── main
+│   └── cpp_dummy_files
+│       └── main.cpp
+├── examples
+│   ├── graph_main_fibonacci.png
+│   ├── graph_main.png
+│   ├── main.cpp
+│   ├── trace_main_fibonacci.txt
+│   └── trace_main.txt
+├── LICENSE
+├── Makefile
+├── poetry.lock
+├── pyproject.toml
+├── README.md
+├── src
+│   └── tracer
+│       ├── CMakeLists.txt
+│       └── tracer.cpp
+├── tools_py
+│   ├── __pycache__
+│   │   └── visualize_cfg.cpython-312.pyc
+│   ├── visualize_cfg.py
+│   └── walker.py
+├── traces
+│   ├── graph_main.png
+│   ├── json_from_r2.txt
+│   └── trace_main.txt
