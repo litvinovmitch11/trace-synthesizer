@@ -1,34 +1,64 @@
 #!/bin/bash
+set -e
 
-# Настройка путей (как у тебя)
-LLVM_BIN="/home/mitchell/dev/llvm/llvm-project/build-install/bin"
-CLANG="$LLVM_BIN/clang++"
-LLC="$LLVM_BIN/llc"
-PROFDATA="$LLVM_BIN/llvm-profdata"
-PLUGIN="/home/mitchell/dev/llvm/trace-synthesizer/build/src/tracer/CFGJsonDumper.so"
+# --- НАСТРОЙКИ ---
+LLVM_ROOT="/home/mitchell/dev/llvm/llvm-project/build-install"
+CLANG="$LLVM_ROOT/bin/clang++"
+LLC="$LLVM_ROOT/bin/llc"
+LLVM_READOBJ="$LLVM_ROOT/bin/llvm-readobj"
+PROJECT_ROOT="/home/mitchell/dev/llvm/trace-synthesizer"
+SRC_FILE="$PROJECT_ROOT/examples/main.cpp"
+PLUGIN_SO="$PROJECT_ROOT/build/src/tracer/CFGJsonDumper.so"
+TOOLS_PY="$PROJECT_ROOT/tools_py"
 
-SRC="/home/mitchell/dev/llvm/trace-synthesizer/examples/main.cpp"
+# 1. Компиляция
+echo "[1] Compiling Application..."
+$CLANG -O2 -emit-llvm -c $SRC_FILE -o app.bc
+$LLC -load $PLUGIN_SO --basic-block-address-map app.bc -o app.s
+$CLANG -O2 -no-pie app.s -o app_bin
 
-echo "--- 1. Компиляция с инструментацией (Instrumentation Build) ---"
-# Генерирует бинарник, который при запуске пишет сырой профиль
-$CLANG -O2 -fprofile-instr-generate -o main_instrumented $SRC
+# 2. Сбор трейса
+echo "[2] Collecting Trace..."
+/home/mitchell/dev/llvm/DynamoRIO-Linux-11.3.0/bin64/drrun -t drcov -- ./app_bin
 
-echo "--- 2. Запуск для сбора профиля ---"
-# Запускаем программу. Она создаст файл default.profraw
-./main_instrumented
+DRCOV_FILE=$(ls -t drcov.app_bin.*.proc.log 2>/dev/null | head -1)
+if [ -z "$DRCOV_FILE" ]; then
+    echo "Error: No drcov trace file found!"
+    exit 1
+fi
 
-echo "--- 3. Конвертация профиля (Merge Profile) ---"
-# LLVM не читает сырой .profraw, ему нужен индексированный .profdata
-$PROFDATA merge -output=code.profdata default.profraw
+# 3. Извлечение адресов
+echo "[3] Extracting BB Map..."
+$LLVM_READOBJ --bb-addr-map ./app_bin > out.txt
 
-echo "--- 4. Компиляция в Bitcode с использованием профиля ---"
-# Теперь компилируем исходник в .bc, скармливая ему профиль.
-# Clang пометит в IR вероятности ветвления (BranchWeights).
-$CLANG -O2 -fprofile-instr-use=code.profdata -c -emit-llvm -o main_optimized.bc $SRC
+# 4. Матчинг (используем ОБНОВЛЕННЫЙ match_trace.py)
+echo "[4] Matching Trace..."
+python3 $TOOLS_PY/match_trace.py \
+    --cfg main.cfg.json \
+    --readobj out.txt \
+    --trace $DRCOV_FILE \
+    --output final_trace.json
 
-echo "--- 5. Генерация ASM с нашим плагином ---"
-# Запускаем llc. На этом этапе MachineBranchProbabilityInfo считает данные из IR,
-# которые туда положил Clang на шаге 4.
-$LLC -load $PLUGIN -O2 main_optimized.bc -o main.s 2> cfg_dump.json
+# 5. Визуализация
+echo "[5] Visualizing..."
 
-echo "Done! Check cfg_dump.json"
+# 5.1 Simple CFG
+python3 $TOOLS_PY/visualize_cfg.py \
+    --cfg main.cfg.json \
+    --mode simple \
+    --output visualization_simple
+
+# 5.2 PGO CFG (Static probabilities)
+python3 $TOOLS_PY/visualize_cfg.py \
+    --cfg main.cfg.json \
+    --mode pgo \
+    --output visualization_pgo
+
+# 5.3 Trace CFG (Real execution path)
+python3 $TOOLS_PY/visualize_cfg.py \
+    --cfg main.cfg.json \
+    --trace final_trace.json \
+    --mode trace \
+    --output visualization_trace
+
+echo "Done! Check .svg files."
