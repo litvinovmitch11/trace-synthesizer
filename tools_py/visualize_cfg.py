@@ -1,7 +1,7 @@
 import argparse
 import json
-import os
 import sys
+import html
 from collections import Counter
 import graphviz
 
@@ -10,143 +10,160 @@ class CFGVisualizer:
         self.cfg_data = self._load_json(cfg_path)
         self.trace_data = self._load_json(trace_path) if trace_path else None
         
-        self.func_name = self.cfg_data.get("function_name", "unknown_func")
+        self.func_name = self.cfg_data.get("function_name", "unknown")
+        # Словарь блоков
         self.blocks = {b['id']: b for b in self.cfg_data['blocks']}
         
-        # Подготовка данных трейса
-        self.block_visits = Counter()
-        self.edge_visits = Counter()
-        self.trace_path_set = set() # (src_id, dst_id)
+        self.trace_counts = Counter()
+        self.trace_edges = Counter()
+        self.max_visits = 0
         
         if self.trace_data:
             trace_ids = self.trace_data.get("trace_bb_ids", [])
-            self.block_visits.update(trace_ids)
+            # Считаем посещения блоков
+            self.trace_counts.update(trace_ids)
+            if self.trace_counts:
+                self.max_visits = max(self.trace_counts.values())
             
-            # Собираем переходы из трейса (ребра)
+            # Считаем переходы (ребра)
             for i in range(len(trace_ids) - 1):
-                src = trace_ids[i]
-                dst = trace_ids[i+1]
-                self.edge_visits[(src, dst)] += 1
-                self.trace_path_set.add((src, dst))
+                u, v = trace_ids[i], trace_ids[i+1]
+                self.trace_edges[(u, v)] += 1
 
     def _load_json(self, path):
         if not path: return None
         try:
-            with open(path, 'r') as f:
-                return json.load(f)
+            with open(path, 'r') as f: return json.load(f)
         except Exception as e:
-            print(f"Error loading {path}: {e}")
+            print(f"Err loading {path}: {e}")
             sys.exit(1)
 
-    def _get_color_heatmap(self, probability):
-        """Возвращает цвет от синего (холодно) до красного (горячо) на основе вероятности."""
-        # Простая градиентная логика для HEX цвета
-        val = int(probability * 255)
-        return f"#{val:02x}00{255-val:02x}"
-
-    def _get_trace_color(self, visits, max_visits):
-        """Зеленый градиент в зависимости от частоты посещения."""
-        if visits == 0: return "black" # или lightgray
-        if max_visits == 0: return "green"
-        
-        # Чем чаще посещали, тем темнее/насыщеннее зеленый
-        intensity = 0.2 + 0.8 * (visits / max_visits)
-        # В graphviz можно использовать HSV
-        return f"0.33 {intensity:.2f} 0.9" # H S V (Green approx)
+    def _get_pgo_color(self, prob):
+        """Heatmap color for PGO edges."""
+        if prob < 0.01: return "black"
+        # От черного к красному через желтый (упрощенно)
+        if prob > 0.5: return "red"
+        if prob > 0.2: return "orange"
+        return "black"
 
     def render(self, output_file, mode='simple'):
-        """
-        mode: 'simple' | 'pgo' | 'trace'
-        """
-        dot = graphviz.Digraph(comment=self.func_name, format='svg')
-        dot.attr(rankdir='TB', label=f"CFG: {self.func_name} [{mode.upper()}]", fontname="Helvetica")
-        dot.attr('node', shape='record', fontname="Consolas", style='filled', fillcolor='white')
-
-        max_block_visits = max(self.block_visits.values()) if self.block_visits else 1
+        # Используем engine='dot' явно
+        dot = graphviz.Digraph(format='svg', comment=self.func_name, engine='dot')
         
-        # 1. Рисуем узлы
+        # Настройки графа для стабильности
+        dot.attr(rankdir='TB', fontname='Helvetica', label=f"Func: {self.func_name} [{mode}]")
+        dot.attr(newrank='true')  # Помогает с выравниванием
+        dot.attr(concentrate='false') # Иногда true вызывает ошибки
+        
+        # Настройки узлов: shape=plain означает, что мы полностью управляем видом через HTML
+        dot.attr('node', shape='plain', fontname='Consolas')
+
+        # 1. Рисуем Узлы
         for b in self.cfg_data['blocks']:
-            bb_id = b['id']
-            name = b['name'].replace(self.func_name + ":", "") # Упрощаем имя
+            bid = b['id']
+            name = html.escape(b['name'].replace(self.func_name + ":", ""))
+            instrs = b.get('instr_count', '?')
             
-            # Формируем HTML-подобную метку
-            label = f"{{ ID: {bb_id} | {name} }}"
+            # Базовые стили
+            bg_color = "white"
+            border_color = "black"
+            visits_row = ""
             
-            # Доп инфо (инструкции)
-            instr_count = b.get('instr_count', '?')
-            first_i = b.get('first_instr', '')
-            last_i = b.get('last_instr', '')
-            details = f"{instr_count} instrs\\nStart: {first_i}\\nEnd: {last_i}"
-            label += f"| {details}"
-
-            # Стилизация узла
-            fillcolor = "white"
-            penwidth = "1"
-            color = "black"
-
+            # Логика TRACE (раскраска узлов)
             if mode == 'trace' and self.trace_data:
-                visits = self.block_visits[bb_id]
+                visits = self.trace_counts[bid]
                 if visits > 0:
-                    fillcolor = "#e6fffa" # Light Mint
-                    color = "darkgreen"
-                    penwidth = "2"
-                    label += f"| Visits: {visits}"
+                    # Легкий зеленый фон, если посетили
+                    bg_color = "#e8f5e9"
+                    border_color = "darkgreen"
+                    visits_row = f"<TR><TD ALIGN='LEFT'><FONT COLOR='darkgreen' POINT-SIZE='10'>x{visits}</FONT></TD></TR>"
                 else:
-                    color = "lightgray"
-                    fontcolor = "gray"
+                    border_color = "gray"
+                    name = f"<FONT COLOR='gray'>{name}</FONT>"
 
-            elif mode == 'pgo':
-                # Здесь можно красить блоки, если есть BlockFrequencyInfo (в JSON пока нет),
-                # либо оставить белыми и красить только ребра.
-                pass
+            # Формируем HTML Label (Таблица)
+            # Port='p' нужен, чтобы ребра не терялись
+            label = f"""<
+            <TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" BGCOLOR="{bg_color}" PORT="p">
+                <TR><TD ALIGN="CENTER"><B>BB {bid}</B></TD></TR>
+                <TR><TD ALIGN="LEFT" BALIGN="LEFT">{name}</TD></TR>
+                <TR><TD ALIGN="LEFT"><FONT POINT-SIZE="10">Instrs: {instrs}</FONT></TD></TR>
+                {visits_row}
+            </TABLE>
+            >"""
 
-            dot.node(str(bb_id), label=label, fillcolor=fillcolor, color=color, penwidth=penwidth)
+            dot.node(str(bid), label=label, color=border_color)
 
-        # 2. Рисуем ребра
+        # 2. Рисуем Ребра (существующие в CFG)
+        existing_cfg_edges = set()
+        
         for b in self.cfg_data['blocks']:
-            src_id = b['id']
+            src = b['id']
             for succ in b['successors']:
-                dst_id = succ['target_id']
-                prob = succ['prob']
-                is_fallthrough = succ['is_fallthrough']
+                dst = succ['target_id']
+                existing_cfg_edges.add((src, dst))
                 
-                # Базовый стиль
-                style = "solid" if is_fallthrough else "dashed"
-                weight = "10" if is_fallthrough else "1" # Пытаемся выстроить fallthrough вертикально
-                label = f"{prob:.2f}"
-                color = "black"
-                penwidth = "1"
+                # Атрибуты ребра
+                edge_attrs = {
+                    'style': 'solid',
+                    'color': 'black',
+                    'penwidth': '1',
+                    'label': ''
+                }
+                
+                # Fallthrough (визуально прямой поток)
+                if succ.get('is_fallthrough'):
+                    edge_attrs['weight'] = '10' # Сильное притяжение вниз
+                else:
+                    edge_attrs['weight'] = '1'
 
-                if mode == 'trace' and self.trace_data:
-                    visits = self.edge_visits[(src_id, dst_id)]
+                # Режим PGO
+                if mode == 'pgo':
+                    prob = succ.get('prob', 0.0)
+                    edge_attrs['label'] = f"{prob:.2f}"
+                    edge_attrs['color'] = self._get_pgo_color(prob)
+                    if prob > 0.5: edge_attrs['penwidth'] = '2.5'
+
+                # Режим TRACE
+                elif mode == 'trace' and self.trace_data:
+                    visits = self.trace_edges[(src, dst)]
                     if visits > 0:
-                        color = "green" # darkgreen
-                        penwidth = "2.5"
-                        label = f"x{visits}"
+                        edge_attrs['color'] = '#006400' # DarkGreen
+                        edge_attrs['penwidth'] = '3.0'
+                        edge_attrs['label'] = f"x{visits}"
                     else:
-                        color = "lightgray"
-                        style = "dotted"
-                
-                elif mode == 'pgo':
-                    color = self._get_color_heatmap(prob)
-                    if prob > 0.5:
-                        penwidth = "2"
-                    label = f"{prob:.1%}"
+                        edge_attrs['color'] = 'gray'
+                        edge_attrs['style'] = 'dashed'
+                        edge_attrs['penwidth'] = '0.5'
 
-                dot.edge(str(src_id), str(dst_id), label=label, style=style, color=color, penwidth=penwidth, weight=weight)
+                # Рисуем ребро. Используем порты :s (south) и :n (north) или :p для стабильности
+                dot.edge(str(src), str(dst), **edge_attrs)
 
-        # Рендеринг
-        output_path = dot.render(output_file, cleanup=True)
-        print(f"[+] Graph generated: {output_path}")
+        # 3. Рисуем GHOST-ребра (Аномалии трейса)
+        if mode == 'trace':
+            for (src, dst), count in self.trace_edges.items():
+                if (src, dst) not in existing_cfg_edges:
+                    # Это переход, которого нет в CFG!
+                    dot.edge(str(src), str(dst), 
+                             label=f"GHOST x{count}", 
+                             color="red", 
+                             style="dotted", 
+                             penwidth="2.0",
+                             constraint="false") # Не ломать layout
+
+        try:
+            out_path = dot.render(output_file, cleanup=True)
+            print(f"[+] Rendered to {out_path}")
+        except Exception as e:
+            print(f"[-] Graphviz failed: {e}")
+            print("Try installing: sudo apt-get install graphviz")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Visualize CFG from JSON")
-    parser.add_argument("--cfg", required=True, help="Path to main.cfg.json")
-    parser.add_argument("--trace", help="Path to final_trace.json (required for 'trace' mode)")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--cfg", required=True)
+    parser.add_argument("--trace")
     parser.add_argument("--mode", choices=['simple', 'pgo', 'trace'], default='simple')
-    parser.add_argument("--output", default="cfg_output", help="Output filename (without extension)")
-    
+    parser.add_argument("--output", default="viz_output")
     args = parser.parse_args()
     
-    viz = CFGVisualizer(args.cfg, args.trace)
-    viz.render(args.output, args.mode)
+    CFGVisualizer(args.cfg, args.trace).render(args.output, args.mode)
