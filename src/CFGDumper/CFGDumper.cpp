@@ -101,7 +101,7 @@ public:
                 EdgeObj["target_id"] = (int64_t)Succ->getNumber();
                 
                 BranchProbability Prob = MBPI.getEdgeProbability(&MBB, Succ);
-                EdgeObj["prob"] = (double)Prob.getNumerator() / Prob.getDenominator();
+                EdgeObj["prob"] = Prob.toDouble();
                 
                 EdgeObj["is_fallthrough"] = MBB.isLayoutSuccessor(Succ);
                 Successors.push_back(std::move(EdgeObj));
