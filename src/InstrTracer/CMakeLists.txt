@@ -1,0 +1,1 @@
+add_dynamorio_client(InstrTracer InstrTracer.cpp)

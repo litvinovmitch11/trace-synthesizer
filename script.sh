@@ -9,7 +9,7 @@ LLVM_READOBJ="$LLVM_ROOT/bin/llvm-readobj"
 PROJECT_ROOT="/home/mitchell/dev/llvm/trace-synthesizer"
 SRC_FILE="$PROJECT_ROOT/examples/main.cpp"
 PLUGIN_SO="$PROJECT_ROOT/build/src/CFGDumper/CFGDumper.so"
-CLIENT_LIB="$PROJECT_ROOT/build/src/BBTracer/libBBTracer.so"
+CLIENT_LIB="$PROJECT_ROOT/build/src/InstrTracer/libInstrTracer.so"
 TOOLS_PY="$PROJECT_ROOT/tools_py"
 
 # 1. Компиляция для профилирования

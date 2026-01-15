@@ -1,28 +1,24 @@
 [project]
 name = "trace-synthesizer"
 version = "0.1.0"
-description = "TODO: add description"
+description = "A research framework for collecting, analyzing, and eventually synthesizing execution traces using machine learning."
 authors = [
     {name = "Michael Litvinov", email = "litvinovmitch11@gmail.com"}
 ]
 license = "Apache-2.0"
 readme = "README.md"
-requires-python = ">=3.12,<3.14.1 || >3.14.1"
+requires-python = ">=3.12"
 
 dependencies = [
     "graphviz (>=0.21,<0.22)",
-    "r2pipe (>=1.9.6,<2.0.0)",
-    "networkx (>=3.6.1,<4.0.0)",
-    "matplotlib (>=3.10.8,<4.0.0)",
-    "numpy (>=2.4.0,<3.0.0)",
 ]
 
 [tool.poetry]
 package-mode = false
 
 [tool.poetry.group.dev.dependencies]
-black = ">=25.11.0,<26.0.0"
-isort = ">=7.0.0,<8.0.0"
+isort = "^7.0.0"
+black = "^25.12.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

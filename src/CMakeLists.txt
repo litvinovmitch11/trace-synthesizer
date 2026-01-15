@@ -1,2 +1,2 @@
-add_subdirectory(BBTracer)
 add_subdirectory(CFGDumper)
+add_subdirectory(InstrTracer)
