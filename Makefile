@@ -10,6 +10,8 @@ LLVM_INSTALL_DIR="/home/mitchell/dev/llvm/llvm-project/build-install"
 
 NPROC=8
 
+.PHONY: configure build tidy format format-py
+
 configure:
 	cmake -B $(BUILD_DIR) \
 		-DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
@@ -20,15 +22,15 @@ configure:
 build:
 	cmake --build $(BUILD_DIR) -j$(NPROC)
 
+tidy:
+	@find src/ -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.cc" -o -name "*.cxx" \) \
+		-exec $(CLANG_TIDY) -p $(BUILD_DIR) --config-file=".clang-tidy" {} \;
+
 format:
 	@find src/ -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.cc" -o -name "*.cxx" \) \
 		-exec $(CLANG_FORMAT) -i -style=file:.clang-format {} \;
 	@find include/ -type f \( -name "*.h" -o -name "*.hpp" -o -name "*.hh" -o -name "*.hxx" \) \
 		-exec $(CLANG_FORMAT) -i -style=file:.clang-format {} \;
-
-tidy:
-	@find src/ -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.cc" -o -name "*.cxx" \) \
-		-exec $(CLANG_TIDY) --config-file=".clang-tidy" {} \;
 
 format-py:
 	poetry run isort tools_py/
