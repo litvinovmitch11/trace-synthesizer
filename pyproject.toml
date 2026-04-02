@@ -16,6 +16,11 @@ dependencies = [
 [tool.poetry]
 package-mode = false
 
+[tool.poetry.dependencies]
+python = ">=3.12"
+graphviz = "^0.20.3"
+cxxfilt = "^0.3.0"
+
 [tool.poetry.group.dev.dependencies]
 isort = "^7.0.0"
 black = "^25.12.0"

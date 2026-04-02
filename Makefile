@@ -1,4 +1,5 @@
 BUILD_DIR=build
+OUTPUT_DIR=output
 BUILD_TYPE=Debug
 
 C_COMPILER=clang-21
@@ -10,7 +11,7 @@ LLVM_INSTALL_DIR="/home/mitchell/dev/llvm/llvm-project/build-install"
 
 NPROC=8
 
-.PHONY: configure build tidy format format-py
+.PHONY: configure build clean clean-output tidy format format-py cfg-examples trace-examples e2e-pipeline
 
 configure:
 	cmake -B $(BUILD_DIR) \
@@ -21,6 +22,9 @@ configure:
 
 build:
 	cmake --build $(BUILD_DIR) -j$(NPROC)
+
+clean:
+	cmake --build $(BUILD_DIR) --target clean
 
 tidy:
 	@find src/ -type f \( -name "*.c" -o -name "*.cpp" -o -name "*.cc" -o -name "*.cxx" \) \
@@ -35,3 +39,29 @@ format:
 format-py:
 	poetry run isort tools_py/
 	poetry run black tools_py/
+
+clean-output:
+	rm -rf $(OUTPUT_DIR)/
+
+cfg-examples:
+	@for file in examples/*.cpp; do \
+		OUT_DIR=$(OUTPUT_DIR) ./scripts/generate_cfg.sh $$file; \
+	done
+
+trace-examples:
+	@for file in examples/*.cpp; do \
+		BASENAME=$$(basename "$$file" .cpp); \
+		./scripts/run_tracer.sh output/$$BASENAME.bin $$BASENAME.bin; \
+		poetry run python3 tools_py/trace_pipeline.py --cfg output/$$BASENAME.cfg.json --map output/$${BASENAME}_bb_map.txt --trace output/$$BASENAME.trace.bin --out output/$$BASENAME.compressed_trace.json; \
+	done
+
+e2e-pipeline:
+	@if [ -n "$(FILE)" ]; then \
+		echo "Running End-to-End Pipeline for $(FILE)..."; \
+		./scripts/full_pipeline.sh $(FILE) $(ARGS); \
+	else \
+		echo "Running End-to-End Pipeline for all examples..."; \
+		for file in examples/*.cpp; do \
+			./scripts/full_pipeline.sh $$file $(ARGS); \
+		done; \
+	fi

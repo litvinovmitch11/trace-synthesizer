@@ -1,1 +1,2 @@
 add_dynamorio_client(InstrTracer InstrTracer.cpp)
+use_DynamoRIO_extension(InstrTracer drmgr)
