@@ -89,7 +89,7 @@ def main():
     # Build Nodes
     for block in func_data["blocks"]:
         bb_id = block["id"]
-        name = block.get("name", f"BB_{bb_id}")
+        name = demangle(block.get("name", f"BB_{bb_id}"))
         instr_count = block.get("instr_count", 0)
         is_entry = block.get("is_entry", False)
         successors = block.get("successors", [])

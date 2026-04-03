@@ -2,4 +2,4 @@
 build
 venv
 __pycache__
-output*
+output
