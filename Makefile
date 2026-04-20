@@ -20,6 +20,7 @@ help:
 	@echo "  make build       — compile plugins + DynamoRIO"
 	@echo "  make test-py     — poetry run pytest"
 	@echo "  make check       — test-py + scripts/check_baseline.sh (build artifacts)"
+	@echo "  analysis/baseline_ctuning.ipynb — baseline plots (poetry install --with dev)"
 	@echo "  make e2e-pipeline / trace-examples / cfg-examples / benchmark-complex / ctuning-rollout — see README and docs/REPRODUCTION_*.md"
 
 configure:

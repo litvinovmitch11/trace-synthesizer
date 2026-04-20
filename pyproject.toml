@@ -20,11 +20,15 @@ cxxfilt = "^0.3.0"
 torch = { version = "~2.2.0", source = "pytorch-cpu" }
 gymnasium = "^1.0.0"
 numpy = ">=1.26,<2"
+matplotlib = "^3.10.8"
 
 [tool.poetry.group.dev.dependencies]
 isort = "^7.0.0"
 black = "^25.12.0"
 pytest = "^8.3.0"
+jupyter = "^1.1.0"
+ipykernel = "^6.29.0"
+pandas = "^2.2.0"
 
 [tool.black]
 line-length = 88

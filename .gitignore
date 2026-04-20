@@ -1,5 +1,7 @@
 .vscode
 build
 venv
+.venv
 __pycache__
 output
+analysis/artifacts
