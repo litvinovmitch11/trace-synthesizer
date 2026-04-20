@@ -1,85 +1,77 @@
-# Trace Synthesizer (End-to-End PGO & Trace Pipeline)
+# Trace Synthesizer
 
-A research pipeline integrating LLVM Machine IR control-flow graphs with DynamoRIO execution traces to create 100% accurate ground-truth datasets for ML on compilers (e.g., RL agents).
+Research pipeline that couples **LLVM Machine IR CFGs** (with PGO edge weights) to **DynamoRIO instruction traces**, compresses them to basic-block sequences, and compares **ground-truth** runs against **synthetic** traces generated on the same CFG grammar.
 
-Read the full documentation:
-- [Документация (Русский)](docs/Documentation_RU.md)
-- [Documentation (English)](docs/Documentation_EN.md)
+**Current stage.** A reproducible **baseline**: Markov random walks driven by normalized PGO weights (`RandomPGOAgent` + `CFGWalkEnv`). The stack is **ML-ready** in the sense that trace JSON (`bb_trace`), compression/validation, metrics, and Gymnasium hooks stay fixed while the policy behind the agent protocol can be swapped for trainable models.
+
+**One-line contract.** *Baseline* = RandomPGO on the CFG grammar; *ML-ready* = same trace formats, same metric entry points, swappable agent.
+
+## Documentation
+
+Documentation is split by language under `docs/en/` and `docs/ru/` (mirrored filenames). Entry points:
+
+- [docs/README.md](docs/README.md) — how to pick a language tree.
+- English hub: [docs/en/README.md](docs/en/README.md); Russian hub: [docs/ru/README.md](docs/ru/README.md).
+- Reproduction: [docs/en/REPRODUCTION.md](docs/en/REPRODUCTION.md), [docs/ru/REPRODUCTION.md](docs/ru/REPRODUCTION.md).
+- Overview: [docs/en/Documentation.md](docs/en/Documentation.md), [docs/ru/Documentation.md](docs/ru/Documentation.md).
+- Metrics index: [docs/en/METRICS_AND_TRACE_ML_INFRASTRUCTURE.md](docs/en/METRICS_AND_TRACE_ML_INFRASTRUCTURE.md), [docs/ru/METRICS_AND_TRACE_ML_INFRASTRUCTURE.md](docs/ru/METRICS_AND_TRACE_ML_INFRASTRUCTURE.md).
+- Ctuning: [docs/en/CTUNING_PROGRAMS.md](docs/en/CTUNING_PROGRAMS.md), [docs/ru/CTUNING_PROGRAMS.md](docs/ru/CTUNING_PROGRAMS.md); core experiment: [docs/en/CTUNING_CORE_EXPERIMENT.md](docs/en/CTUNING_CORE_EXPERIMENT.md), [docs/ru/CTUNING_CORE_EXPERIMENT.md](docs/ru/CTUNING_CORE_EXPERIMENT.md).
+- `benchmark_complex` manual: [docs/en/BENCHMARK_COMPLEX_MANUAL.md](docs/en/BENCHMARK_COMPLEX_MANUAL.md), [docs/ru/BENCHMARK_COMPLEX_MANUAL.md](docs/ru/BENCHMARK_COMPLEX_MANUAL.md).
 
 ## Prerequisites
 
-- **LLVM**: Compiled with necessary dependencies (tested with LLVM 21).
-- **DynamoRIO**: Automatically fetched and built via CMake.
-- **Python 3.12+** with `poetry`.
-- **Make & CMake**.
+- LLVM 21 (compiler + `llvm-readobj` + `llc` on `PATH` or under `LLVM_INSTALL_DIR`).
+- DynamoRIO fetched/built by CMake.
+- Python 3.12+ and Poetry.
+- CMake, Ninja/Make, a C++ toolchain matching the LLVM major you link against.
 
-## Setup & Build
+## Quickstart
 
-1. Install Python dependencies:
-   ```bash
-   poetry install
-   ```
-
-2. Configure and build the project:
-   ```bash
-   make configure
-   make build
-   ```
-
-## Available Make Commands
-
-### 1. End-to-End Pipeline
-The main entry point. Automatically builds the profile (PGO), collects execution traces via DynamoRIO, generates the CFG via the `CFGDumper` LLVM plugin, compresses the trace, and visualizes the results (SVG) with trace overlays and PGO hot-paths.
-
-Run on all examples:
 ```bash
-make e2e-pipeline
+poetry install
+export LLVM_INSTALL_DIR=/path/to/llvm-project/build-install   # override default from Makefile
+make configure
+make build
+make check          # pytest + lightweight native artifact checks
 ```
 
-Run on a specific file with arguments (e.g., passing arguments to the target binary):
+End-to-end on one example:
+
 ```bash
-make e2e-pipeline FILE=examples/complex.cpp ARGS="process"
+make e2e-pipeline FILE=examples/complex.cpp ARGS=""
 ```
 
-*Note: All generated artifacts (graphs, traces, `.bc`, `.s` files) are placed in the `output/` directory.*
+Curated ctuning rollouts (needs submodule):
 
-### 2. Run Specific Components
-
-Generate CFGs for all examples (without trace collection):
 ```bash
-make cfg-examples
+make ctuning-bootstrap
+make ctuning-rollout CTUNING_ARGS='--only cbench-telecom-crc32 --episodes 5 --max-steps 3000 --seed 0'
 ```
 
-Generate CFGs, run DynamoRIO tracing, and compress/validate the traces for all examples:
+Paired CRC32 visualization (after crc32 artifacts exist):
+
 ```bash
-make trace-examples
+./scripts/ctuning_crc32_paired_traces_and_viz.sh
 ```
 
-### 3. Cleanup
+## Make targets
 
-Clean all generated artifacts from the `output/` directory:
+Run `make help` for a short list. Common targets: `configure`, `build`, `test-py`, `check`, `e2e-pipeline`, `cfg-examples`, `trace-examples`, `benchmark-complex`, `ctuning-bootstrap`, `ctuning-rollout`.
+
+## Python CLI (after `poetry install`)
+
 ```bash
-make clean-output
+poetry run python -m trace_synthesizer compress \
+  --cfg output/foo.cfg.json --map output/foo_bb_map.txt \
+  --trace output/foo.trace.bin --out output/foo.compressed_trace.json
+
+poetry run python -m trace_synthesizer rollout-random \
+  --cfg output/foo.cfg.json --func main --episodes 10 --seed 0 --out-dir output/rollouts_foo
+
+poetry run python -m trace_synthesizer metrics-compare \
+  --reference output/main_intra_real.json \
+  --candidate output/rollouts_foo/intra_traces.jsonl \
+  --func main --out output/metrics_report.json
 ```
 
-Clean the CMake build directory (keeps DynamoRIO intact):
-```bash
-make clean
-```
-
-### 4. Code Quality & Formatting
-
-Format C++ code (`clang-format`):
-```bash
-make format
-```
-
-Run C++ static analysis (`clang-tidy`):
-```bash
-make tidy
-```
-
-Format Python code (`black` and `isort` via Poetry):
-```bash
-make format-py
-```
+Shell scripts honor `LLVM_DIR` or `LLVM_INSTALL_DIR` (see `scripts/full_pipeline.sh`, `scripts/generate_cfg.sh`, `scripts/ctuning_full_pipeline_c.sh`).

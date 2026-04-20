@@ -7,11 +7,20 @@ CXX_COMPILER=clang++-21
 CLANG_TIDY=clang-tidy-21
 CLANG_FORMAT=clang-format-21
 
-LLVM_INSTALL_DIR="/home/mitchell/dev/llvm/llvm-project/build-install"
+# LLVM install prefix for CMake (-DLT_LLVM_INSTALL_DIR=...). Override on the command line or in the environment.
+LLVM_INSTALL_DIR ?= /home/mitchell/dev/llvm/llvm-project/build-install
 
 NPROC=8
 
-.PHONY: configure build clean clean-output tidy format format-py cfg-examples trace-examples e2e-pipeline
+.PHONY: help configure build clean clean-output tidy format format-py test-py check cfg-examples trace-examples e2e-pipeline benchmark-complex ctuning-bootstrap ctuning-rollout
+
+help:
+	@echo "trace-synthesizer — common targets"
+	@echo "  make configure   — cmake -B $(BUILD_DIR) (uses LLVM_INSTALL_DIR=$(LLVM_INSTALL_DIR))"
+	@echo "  make build       — compile plugins + DynamoRIO"
+	@echo "  make test-py     — poetry run pytest"
+	@echo "  make check       — test-py + scripts/check_baseline.sh (build artifacts)"
+	@echo "  make e2e-pipeline / trace-examples / cfg-examples / benchmark-complex / ctuning-rollout — see README and docs/REPRODUCTION_*.md"
 
 configure:
 	cmake -B $(BUILD_DIR) \
@@ -37,8 +46,15 @@ format:
 		-exec $(CLANG_FORMAT) -i -style=file:.clang-format {} \;
 
 format-py:
-	poetry run isort tools_py/
-	poetry run black tools_py/
+	poetry run isort trace_synthesizer/ tests/
+	poetry run black trace_synthesizer/ tests/
+
+test-py:
+	poetry run pytest tests/ -q
+
+check: test-py
+	@chmod +x scripts/check_baseline.sh 2>/dev/null || true
+	@./scripts/check_baseline.sh
 
 clean-output:
 	rm -rf $(OUTPUT_DIR)/
@@ -52,7 +68,7 @@ trace-examples:
 	@for file in examples/*.cpp; do \
 		BASENAME=$$(basename "$$file" .cpp); \
 		./scripts/run_tracer.sh output/$$BASENAME.bin $$BASENAME.bin; \
-		poetry run python3 tools_py/trace_pipeline.py --cfg output/$$BASENAME.cfg.json --map output/$${BASENAME}_bb_map.txt --trace output/$$BASENAME.trace.bin --out output/$$BASENAME.compressed_trace.json; \
+		poetry run python3 -m trace_synthesizer compress --cfg output/$$BASENAME.cfg.json --map output/$${BASENAME}_bb_map.txt --trace output/$$BASENAME.trace.bin --out output/$$BASENAME.compressed_trace.json; \
 	done
 
 e2e-pipeline:
@@ -65,3 +81,18 @@ e2e-pipeline:
 			./scripts/full_pipeline.sh $$file $(ARGS); \
 		done; \
 	fi
+
+# Full benchmark_complex: C++ plugins + DynamoRIO + Python (rollout, metrics).
+# ARGS are forwarded to the benchmark binary (same as e2e-pipeline). Example: make benchmark-complex ARGS="foo"
+benchmark-complex:
+	@chmod +x scripts/run_benchmark_complex.sh 2>/dev/null || true
+	@./scripts/run_benchmark_complex.sh $(ARGS)
+
+ctuning-bootstrap:
+	@chmod +x scripts/init_ctuning_submodule.sh scripts/bootstrap_ctuning_programs.sh 2>/dev/null || true
+	@./scripts/init_ctuning_submodule.sh
+
+# Curated ctuning-programs: submodule init if needed, C pipeline + rollout-random (subset via ONLY=).
+ctuning-rollout: ctuning-bootstrap
+	@chmod +x scripts/ctuning_full_pipeline_c.sh 2>/dev/null || true
+	poetry run python3 -m trace_synthesizer ctuning-rollout $(CTUNING_ARGS)

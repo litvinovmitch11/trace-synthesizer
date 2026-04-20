@@ -7,7 +7,7 @@
 static file_t log_file;
 static void *write_lock;
 
-// Массив для хранения границ всех целевых модулей
+// [start, end) bounds for each target module we log.
 #define MAX_TARGET_MODULES 64
 static struct {
   app_pc start;
@@ -18,7 +18,7 @@ static int target_bounds_count = 0;
 static char **target_modules = NULL;
 static int target_module_count = 0;
 
-// Буфер для ускорения записи (снижает overhead в 100+ раз)
+// Ring buffer to batch writes (much lower overhead than per-instruction I/O).
 #define BUF_SIZE 8192
 static uint64_t trace_buffer[BUF_SIZE];
 static int buf_idx = 0;
@@ -56,7 +56,7 @@ static void clean_call_log(ptr_uint_t offset) {
 
 static bool should_instrument_module(const char *module_name) {
   if (target_module_count == 0) {
-    return true; // Инструментируем всё (для простых примеров)
+    return true; // Instrument all modules when no filter is set.
   }
 
   for (int i = 0; i < target_module_count; i++) {
@@ -82,14 +82,14 @@ static dr_emit_flags_t event_basic_block(void *drcontext, void *tag,
   for (int i = 0; i < target_bounds_count; i++) {
     if (addr >= target_bounds[i].start && addr < target_bounds[i].end) {
       is_target = true;
-      // Вычисляем смещение относительно начала модуля (RVA)
+      // RVA from module base (matches llvm_bb_addr_map convention).
       offset = (uint64_t)(addr - target_bounds[i].start);
       break;
     }
   }
 
   if (is_target) {
-    // Вставляем вызов перед этой (каждой!) инструкцией
+    // Insert a clean call before each app instruction in this BB.
     dr_insert_clean_call(drcontext, bb, inst, (void *)clean_call_log, false, 1,
                          OPND_CREATE_INTPTR((ptr_uint_t)offset));
   }
