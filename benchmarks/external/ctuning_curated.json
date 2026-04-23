@@ -17,5 +17,38 @@
     "entry_func": "main",
     "rollout_func": "bit_count",
     "rollout_max_steps": 0
+  },
+  {
+    "id": "cbench-telecom-crc32",
+    "description": "CRC32 benchmark; training traces are collected for main1.",
+    "sources_relative": [
+      "program/cbench-telecom-crc32/crc_32.c",
+      "program/cbench-telecom-crc32/ctuning-rtl.c"
+    ],
+    "profile_data": {
+      "kind": "text_file",
+      "filename": "crc32_input.txt",
+      "content": "trace synthesizer crc32 input\n"
+    },
+    "entry_func": "main",
+    "rollout_func": "main1",
+    "rollout_max_steps": 0
+  },
+  {
+    "id": "cbench-security-sha",
+    "description": "SHA benchmark; training traces are collected for sha_stream.",
+    "sources_relative": [
+      "program/cbench-security-sha/sha.c",
+      "program/cbench-security-sha/sha_driver.c",
+      "program/cbench-security-sha/ctuning-rtl.c"
+    ],
+    "profile_data": {
+      "kind": "text_file",
+      "filename": "sha_input.txt",
+      "content": "The quick brown fox jumps over the lazy dog.\n"
+    },
+    "entry_func": "main",
+    "rollout_func": "sha_stream",
+    "rollout_max_steps": 0
   }
 ]

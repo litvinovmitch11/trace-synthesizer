@@ -10,7 +10,7 @@ CTUNING_ROOT="${CTUNING_ROOT:-$ROOT/external/ctuning-programs}"
 if [[ ! -d "$CTUNING_ROOT/program" && -d "$ROOT/benchmarks/external/ctuning-programs/program" ]]; then
   CTUNING_ROOT="$ROOT/benchmarks/external/ctuning-programs"
 fi
-MANIFEST="${MANIFEST:-$ROOT/benchmarks/ctuning_curated.json}"
+MANIFEST="${MANIFEST:-$ROOT/benchmarks/external/ctuning_curated.json}"
 
 PLUGIN_SO="build/src/CFGDumper/CFGDumper.so"
 DRRUN="build/_deps/dynamorio_pkg-src/bin64/drrun"

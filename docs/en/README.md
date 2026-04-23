@@ -74,7 +74,7 @@ make compare-traces
 
 ## Training vs Evaluation Split
 
-- Training corpus source: curated cBench entries from `benchmarks/ctuning_curated.json`.
+- Training corpus source: curated cBench entries from `benchmarks/external/ctuning_curated.json`.
 - Evaluation target: local benchmark `benchmarks/local/benchmark_complex.cpp`.
 
 See full reproducibility steps in `docs/en/REPRODUCTION.md`.

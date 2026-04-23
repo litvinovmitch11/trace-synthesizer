@@ -46,7 +46,7 @@ make train-lstm
 make lstm-eval
 ```
 
-Training data is collected from curated cBench entries in `benchmarks/ctuning_curated.json`, while evaluation is performed on the local example `benchmarks/local/benchmark_complex.cpp`.
+Training data is collected from curated cBench entries in `benchmarks/external/ctuning_curated.json`, while evaluation is performed on the local example `benchmarks/local/benchmark_complex.cpp`.
 
 ## Utilities
 

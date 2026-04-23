@@ -72,7 +72,7 @@ make compare-traces
 
 ## Разделение train / eval
 
-- Обучение: cBench-корпус из `benchmarks/ctuning_curated.json`.
+- Обучение: cBench-корпус из `benchmarks/external/ctuning_curated.json`.
 - Оценка: локальный пример `benchmarks/local/benchmark_complex.cpp`.
 
 Подробное воспроизведение: `docs/ru/REPRODUCTION.md`.
