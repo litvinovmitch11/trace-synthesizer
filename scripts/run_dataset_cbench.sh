@@ -5,7 +5,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 OUT_DIR="${OUT_DIR:-$ROOT/output/dataset_cbench}"
-N_DR="${N_DR:-10}"
+N_DR="${N_DR:-4}"
+DR_TIMEOUT_SEC="${DR_TIMEOUT_SEC:-90}"
 CTUNING_ROOT="${CTUNING_ROOT:-$ROOT/external/ctuning-programs}"
 if [[ ! -d "$CTUNING_ROOT/program" && -d "$ROOT/benchmarks/external/ctuning-programs/program" ]]; then
   CTUNING_ROOT="$ROOT/benchmarks/external/ctuning-programs"
@@ -132,7 +133,11 @@ print("\n".join(bin_args))
   for ((i=0; i<N_DR; i++)); do
     d="$OUT_DIR/dr_runs/$id/$(printf '%02d' "$i")"
     mkdir -p "$d"
-    "$DRRUN" -c "$TRACER_SO" -o "$d/${id}.trace.bin" "${id}.bin" -- "$OUT_DIR/${id}.bin" "${args_array[@]}" >/dev/null
+    timeout "$DR_TIMEOUT_SEC" "$DRRUN" -c "$TRACER_SO" -o "$d/${id}.trace.bin" "${id}.bin" -- "$OUT_DIR/${id}.bin" "${args_array[@]}" >/dev/null || true
+    if [[ ! -s "$d/${id}.trace.bin" ]]; then
+      echo "  skip dr run $i for $id (timeout or empty trace)"
+      continue
+    fi
     poetry run python3 -m trace_synthesizer compress \
       --cfg "$OUT_DIR/${id}.cfg.json" \
       --map "$OUT_DIR/${id}_bb_map.txt" \

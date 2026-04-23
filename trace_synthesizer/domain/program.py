@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Optional
 
 
@@ -25,7 +25,19 @@ class BasicBlock:
     instr_count: int
     has_call: bool
     call_target: Optional[str]
-    successors: tuple[SuccessorEdge, ...]
+    branch_instr_count: int = 0
+    conditional_branch_count: int = 0
+    unconditional_branch_count: int = 0
+    load_count: int = 0
+    store_count: int = 0
+    phi_count: int = 0
+    has_return: bool = False
+    has_indirect_branch: bool = False
+    loop_depth: int = 0
+    dom_tree_depth: int = 0
+    terminator_kind: str = "none"
+    ir2vec_embedding: Optional[tuple[float, ...]] = None
+    successors: tuple[SuccessorEdge, ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True)

@@ -33,6 +33,7 @@ class FeatureWindowLSTMCfgAgent:
         seed: int | None = None,
         checkpoint_stem: Path | str | None = None,
         policy: FeatureWindowLstmPolicy | None = None,
+        sample_temperature: float = 1.0,
     ) -> None:
         self._grammar = grammar
         self._fn = function_name
@@ -73,6 +74,7 @@ class FeatureWindowLSTMCfgAgent:
         self._succ_slots = int(self._policy.succ_feat_slots)
         self._global_dim = int(self._policy.global_summary_dim)
         self._max_actions_ckpt = int(self._policy.max_actions)
+        self._sample_temperature = max(1e-6, float(sample_temperature))
         self._policy.eval()
         self._hx: tuple[torch.Tensor, torch.Tensor] | None = None
         self._feat_buf: deque[np.ndarray] = deque(maxlen=self._window_back)
@@ -135,5 +137,5 @@ class FeatureWindowLSTMCfgAgent:
         logit_vec = logits[0, -1, : self._env_max_actions]
         if self._action_select == "argmax":
             return int(logit_vec.argmax().item())
-        dist = torch.distributions.Categorical(logits=logit_vec)
-        return int(dist.sample(generator=self._rng).item())
+        probs = torch.softmax(logit_vec / self._sample_temperature, dim=0)
+        return int(torch.multinomial(probs, num_samples=1, generator=self._rng).item())

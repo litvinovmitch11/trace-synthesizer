@@ -12,7 +12,7 @@ LLVM_INSTALL_DIR ?= /home/mitchell/dev/llvm/llvm-project/build-install
 
 NPROC=8
 
-.PHONY: help configure build clean clean-output test-py check ctuning-bootstrap plugins-demo random-baseline dataset-cbench train-lstm lstm-eval visualize-trace compare-traces
+.PHONY: help configure build clean clean-output test-py check ctuning-bootstrap plugins-demo random-baseline dataset-cbench train-lstm lstm-eval visualize-trace compare-traces tensorboard package-artifacts
 
 help:
 	@echo "trace-synthesizer — common targets"
@@ -24,6 +24,8 @@ help:
 	@echo "  make dataset-cbench   — build JSONL dataset from cbench programs"
 	@echo "  make train-lstm       — train Feature-Window LSTM on dataset-cbench"
 	@echo "  make lstm-eval        — evaluate trained LSTM and compare with baseline"
+	@echo "  make tensorboard      — open TensorBoard for training logs"
+	@echo "  make package-artifacts— copy final dataset/model/reports"
 	@echo "  make visualize-trace  — visualize CFG and overlay trace (CFG=... FUNC=... [TRACE=...] [OUT=...])"
 	@echo "  make compare-traces   — compare two traces (REF=... CAND=... FUNC=... OUT=...)"
 
@@ -75,6 +77,14 @@ visualize-trace:
 compare-traces:
 	@chmod +x scripts/compare_traces.sh 2>/dev/null || true
 	@./scripts/compare_traces.sh
+
+tensorboard:
+	@chmod +x scripts/run_tensorboard.sh 2>/dev/null || true
+	@./scripts/run_tensorboard.sh $(ARGS)
+
+package-artifacts:
+	@chmod +x scripts/package_experiment_artifacts.sh 2>/dev/null || true
+	@./scripts/package_experiment_artifacts.sh $(ARGS)
 
 ctuning-bootstrap:
 	@chmod +x scripts/init_ctuning_submodule.sh 2>/dev/null || true

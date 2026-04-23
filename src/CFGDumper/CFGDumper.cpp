@@ -1,7 +1,9 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/GlobalValue.h"
@@ -55,6 +57,63 @@ static std::optional<std::string> getCallTarget(const MachineBasicBlock &MBB) {
   return std::nullopt;
 }
 
+struct BlockInstrStats {
+  unsigned BranchInstrCount = 0;
+  unsigned ConditionalBranchCount = 0;
+  unsigned UnconditionalBranchCount = 0;
+  unsigned LoadCount = 0;
+  unsigned StoreCount = 0;
+  unsigned PhiCount = 0;
+  bool HasReturn = false;
+  bool HasIndirectBranch = false;
+};
+
+static BlockInstrStats getInstrStats(const MachineBasicBlock &MBB) {
+  BlockInstrStats S;
+  for (const MachineInstr &MI : MBB) {
+    if (MI.isDebugInstr())
+      continue;
+    if (MI.isBranch()) {
+      S.BranchInstrCount++;
+      if (MI.isConditionalBranch())
+        S.ConditionalBranchCount++;
+      if (MI.isUnconditionalBranch())
+        S.UnconditionalBranchCount++;
+      if (MI.isIndirectBranch())
+        S.HasIndirectBranch = true;
+    }
+    if (MI.mayLoad())
+      S.LoadCount++;
+    if (MI.mayStore())
+      S.StoreCount++;
+    if (MI.isPHI())
+      S.PhiCount++;
+    if (MI.isReturn())
+      S.HasReturn = true;
+  }
+  return S;
+}
+
+static std::string getTerminatorKind(const MachineBasicBlock &MBB) {
+  auto TI = MBB.getFirstTerminator();
+  if (TI == MBB.end())
+    return "none";
+  const MachineInstr &T = *TI;
+  if (T.isReturn())
+    return "return";
+  if (T.isIndirectBranch())
+    return "indirect_branch";
+  if (T.isConditionalBranch())
+    return "conditional_branch";
+  if (T.isUnconditionalBranch())
+    return "unconditional_branch";
+  if (T.isCall())
+    return "call";
+  if (T.isBranch())
+    return "branch";
+  return "other";
+}
+
 namespace {
 
 static cl::opt<std::string> CFGOutFile("cfg-out-file",
@@ -75,6 +134,9 @@ public:
   CFGJsonDumper() : MachineFunctionPass(ID) {
     initializeMachineBranchProbabilityInfoWrapperPassPass(
         *PassRegistry::getPassRegistry());
+    initializeMachineLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
+    initializeMachineDominatorTreeWrapperPassPass(
+        *PassRegistry::getPassRegistry());
   }
 
   StringRef getPassName() const override { return "CFG JSON Dumper Pass"; }
@@ -82,6 +144,8 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -91,6 +155,8 @@ public:
 
     auto &MBPI =
         getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+    auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+    auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
     json::Object FuncJson;
     FuncJson["function_name"] = MF.getName();
@@ -107,6 +173,24 @@ public:
       BlockObj["is_entry"] = (&MBB == &MF.front());
 
       BlockObj["instr_count"] = getInstructionCount(MBB);
+      BlockInstrStats Stats = getInstrStats(MBB);
+      BlockObj["branch_instr_count"] = static_cast<int64_t>(Stats.BranchInstrCount);
+      BlockObj["conditional_branch_count"] =
+          static_cast<int64_t>(Stats.ConditionalBranchCount);
+      BlockObj["unconditional_branch_count"] =
+          static_cast<int64_t>(Stats.UnconditionalBranchCount);
+      BlockObj["load_count"] = static_cast<int64_t>(Stats.LoadCount);
+      BlockObj["store_count"] = static_cast<int64_t>(Stats.StoreCount);
+      BlockObj["phi_count"] = static_cast<int64_t>(Stats.PhiCount);
+      BlockObj["has_return"] = Stats.HasReturn;
+      BlockObj["has_indirect_branch"] = Stats.HasIndirectBranch;
+      BlockObj["terminator_kind"] = getTerminatorKind(MBB);
+      BlockObj["loop_depth"] = static_cast<int64_t>(MLI.getLoopDepth(&MBB));
+      if (MachineDomTreeNode *N = MDT.getNode(&MBB)) {
+        BlockObj["dom_tree_depth"] = static_cast<int64_t>(N->getLevel());
+      } else {
+        BlockObj["dom_tree_depth"] = static_cast<int64_t>(0);
+      }
 
       if (auto CallTarget = getCallTarget(MBB)) {
         BlockObj["has_call"] = true;

@@ -18,6 +18,7 @@ fi
 read -r -a SOURCES <<<"${CTUNING_SOURCES}"
 PRIMARY="${CTUNING_PRIMARY}"
 BIN_ARGS=("$@")
+DR_TIMEOUT_SEC="${DR_TIMEOUT_SEC:-90}"
 
 # Prefer CTUNING_BASENAME (e.g. manifest id) so outputs are stable when PRIMARY is not the main file.
 BASENAME="${CTUNING_BASENAME:-$(basename "$PRIMARY" | sed 's/\.c$//')}"
@@ -33,6 +34,9 @@ LLVM_PROFDATA="$LLVM_DIR/bin/llvm-profdata"
 LLVM_LINK="$LLVM_DIR/bin/llvm-link"
 LLC="$LLVM_DIR/bin/llc"
 LLVM_READOBJ="$LLVM_DIR/bin/llvm-readobj"
+LLVM_IR2VEC="$LLVM_DIR/bin/llvm-ir2vec"
+IR2VEC_VOCAB="${IR2VEC_VOCAB:-/home/mitchell/dev/llvm/llvm-project/llvm/lib/Analysis/models/seedEmbeddingVocab75D.json}"
+ENABLE_IR2VEC="${ENABLE_IR2VEC:-1}"
 
 PLUGIN_SO="build/src/CFGDumper/CFGDumper.so"
 DRRUN="build/_deps/dynamorio_pkg-src/bin64/drrun"
@@ -72,11 +76,18 @@ done
 $LLVM_LINK "${BC_FILES[@]}" -o "$OUT_DIR/${BASENAME}_whole.bc"
 $LLC --basic-block-address-map -relocation-model=pic -load="$PLUGIN_SO" -cfg-pretty=false \
   -cfg-out-file="$OUT_DIR/${BASENAME}.cfg.json" "$OUT_DIR/${BASENAME}_whole.bc" -o "$OUT_DIR/${BASENAME}.s"
+if [[ "$ENABLE_IR2VEC" == "1" && -x "$LLVM_IR2VEC" && -f "$IR2VEC_VOCAB" ]]; then
+  poetry run python3 scripts/augment_cfg_with_ir2vec.py \
+    --cfg "$OUT_DIR/${BASENAME}.cfg.json" \
+    --bc "$OUT_DIR/${BASENAME}_whole.bc" \
+    --llvm-ir2vec "$LLVM_IR2VEC" \
+    --vocab "$IR2VEC_VOCAB" > /dev/null
+fi
 $CLANG_C "$OUT_DIR/${BASENAME}.s" -o "$OUT_DIR/${BASENAME}.bin"
 $LLVM_READOBJ --bb-addr-map "$OUT_DIR/${BASENAME}.bin" >"$OUT_DIR/${BASENAME}_bb_map.txt"
 
 echo "[4/6] DynamoRIO"
-$DRRUN -c "$TRACER_SO" -o "$OUT_DIR/${BASENAME}.trace.bin" "${BASENAME}.bin" -- "$OUT_DIR/${BASENAME}.bin" "${BIN_ARGS[@]}" >/dev/null
+timeout "$DR_TIMEOUT_SEC" "$DRRUN" -c "$TRACER_SO" -o "$OUT_DIR/${BASENAME}.trace.bin" "${BASENAME}.bin" -- "$OUT_DIR/${BASENAME}.bin" "${BIN_ARGS[@]}" >/dev/null
 
 echo "[5/6] Compress + validate"
 poetry run python3 -m trace_synthesizer compress \

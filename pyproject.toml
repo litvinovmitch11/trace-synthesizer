@@ -21,6 +21,8 @@ torch = { version = "~2.2.0", source = "pytorch-cpu" }
 gymnasium = "^1.0.0"
 numpy = ">=1.26,<2"
 matplotlib = "^3.10.8"
+tensorboard = "^2.20.0"
+setuptools = "<81"
 
 [tool.poetry.group.dev.dependencies]
 isort = "^7.0.0"

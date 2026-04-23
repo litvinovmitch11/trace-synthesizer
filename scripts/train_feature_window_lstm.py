@@ -17,9 +17,9 @@ from pathlib import Path
 
 import torch
 import torch.nn.functional as F
+from torch.utils.tensorboard import SummaryWriter
 
 from trace_synthesizer.agents.cfg_supervision import (
-    GLOBAL_CFG_SUMMARY_DIM,
     trace_context_tensors_for_bb_path,
     successor_action_index,
 )
@@ -113,10 +113,28 @@ def main() -> None:
     )
     p.add_argument("--epochs", type=int, default=100)
     p.add_argument("--lr", type=float, default=0.02)
+    p.add_argument("--lstm-hidden", type=int, default=64)
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--device", default="cpu")
     p.add_argument("--max-actions", type=int, default=None, help="Override scan (must be >= all graphs)")
     p.add_argument("--train-report", type=Path, default=None)
+    p.add_argument(
+        "--tb-logdir",
+        type=Path,
+        default=None,
+        help="If set, write TensorBoard scalars under this directory",
+    )
+    p.add_argument(
+        "--tb-run-name",
+        default="train_feature_window_lstm",
+        help="TensorBoard run subdir name (used only with --tb-logdir)",
+    )
+    p.add_argument(
+        "--log-every",
+        type=int,
+        default=1,
+        help="Log every N epochs to TensorBoard",
+    )
     args = p.parse_args()
 
     torch.manual_seed(args.seed)
@@ -137,7 +155,7 @@ def main() -> None:
     if succ_slots < 0:
         succ_slots = max_actions
     use_global = not args.no_global_summary
-    gdim = GLOBAL_CFG_SUMMARY_DIM if use_global else 0
+    gdim = (feat_dim + 1) if use_global else 0
     window_back = int(args.window_back)
 
     meta = feature_window_lstm_meta_for_save(
@@ -146,12 +164,17 @@ def main() -> None:
         max_actions=max_actions,
         succ_feat_slots=succ_slots,
         global_summary_dim=gdim,
-        lstm_hidden=64,
+        lstm_hidden=int(args.lstm_hidden),
         function_name=args.func_filter,
     )
     policy = build_policy_from_meta({"schema_version": 1, **meta})
     policy.to(device)
     opt = torch.optim.Adam(policy.parameters(), lr=args.lr)
+    writer: SummaryWriter | None = None
+    if args.tb_logdir is not None:
+        tb_path = args.tb_logdir / args.tb_run_name
+        tb_path.mkdir(parents=True, exist_ok=True)
+        writer = SummaryWriter(log_dir=str(tb_path))
 
     prepared: list[tuple[torch.Tensor, torch.Tensor, torch.Tensor]] = []
     skipped = 0
@@ -210,7 +233,7 @@ def main() -> None:
 
     random.seed(args.seed)
     indices = list(range(len(prepared)))
-    for _ep in range(args.epochs):
+    for ep in range(args.epochs):
         random.shuffle(indices)
         epoch_loss = 0.0
         for j in indices:
@@ -224,6 +247,8 @@ def main() -> None:
             opt.step()
             epoch_loss += float(loss.detach())
         last_loss = epoch_loss / len(prepared)
+        if writer is not None and ((ep + 1) % max(1, int(args.log_every)) == 0):
+            writer.add_scalar("train/loss", last_loss, ep + 1)
 
     policy.eval()
     args.out_stem.parent.mkdir(parents=True, exist_ok=True)
@@ -247,6 +272,23 @@ def main() -> None:
         args.train_report.write_text(
             json.dumps(report, indent=2, default=str), encoding="utf-8"
         )
+    if writer is not None:
+        writer.add_hparams(
+            {
+                "window_back": window_back,
+                "succ_feat_slots": succ_slots,
+                "global_summary_dim": gdim,
+                "feat_dim": feat_dim,
+                "max_actions": max_actions,
+                "epochs": args.epochs,
+                "lr": args.lr,
+                "lstm_hidden": int(args.lstm_hidden),
+                "seed": args.seed,
+            },
+            {"hparam/final_train_loss": float(last_loss)},
+        )
+        writer.flush()
+        writer.close()
     print(json.dumps(report))
 
 

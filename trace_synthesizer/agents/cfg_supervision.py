@@ -135,7 +135,7 @@ def prefix_features_along_bb_path(
     return np.stack(rows, axis=0)
 
 
-GLOBAL_CFG_SUMMARY_DIM = 6
+GLOBAL_CFG_SUMMARY_DIM = 0
 
 
 def global_cfg_summary_vector(grammar: CfgProgram, function_name: str) -> np.ndarray:
@@ -153,7 +153,9 @@ def global_cfg_summary_vector(grammar: CfgProgram, function_name: str) -> np.nda
     mean = np.mean(np.stack(mats, axis=0), axis=0)
     logn = np.array([np.log1p(len(fn.blocks)) / 10.0], dtype=np.float32)
     out = np.concatenate([mean, logn], axis=0)
-    assert out.shape[0] == GLOBAL_CFG_SUMMARY_DIM
+    # Keep this dynamic so extending BlockFeatures doesn't break training.
+    if out.shape[0] != (mean.shape[0] + 1):
+        raise ValueError("invalid global CFG summary dim")
     return out
 
 
@@ -205,7 +207,7 @@ def trace_context_tensors_for_bb_path(
     successor block features + optional whole-CFG summary vector (constant across steps).
     """
     fd = int(env.observation_space["features"].shape[0])
-    gdim = GLOBAL_CFG_SUMMARY_DIM if use_global_summary else 0
+    gdim = (fd + 1) if use_global_summary else 0
     in_dim = window_back * fd + succ_feat_slots * fd + gdim
     pairs = supervision_pairs_from_bb_path(grammar, function_name, bb_path)
     if len(pairs) < 1:

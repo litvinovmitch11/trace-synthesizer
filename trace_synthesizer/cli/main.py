@@ -269,6 +269,7 @@ def cmd_rollout_lstm(args: argparse.Namespace) -> int:
             env,
             device=device,
             action_select=args.action_select,
+            sample_temperature=args.temperature,
             seed=rs,
             checkpoint_stem=None if policy is not None else ck,
             policy=policy,
@@ -446,6 +447,12 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("argmax", "sample"),
         default="argmax",
         help="How to pick an action from masked logits",
+    )
+    lstm.add_argument(
+        "--temperature",
+        type=float,
+        default=1.0,
+        help="Sampling temperature for --action-select sample (ignored for argmax).",
     )
     lstm.add_argument(
         "--device",

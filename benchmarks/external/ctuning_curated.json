@@ -13,7 +13,7 @@
       "program/cbench-automotive-bitcount/bitstrng.c",
       "program/cbench-automotive-bitcount/bstr_i.c"
     ],
-    "profile_argv": ["250000"],
+    "profile_argv": ["50000"],
     "entry_func": "main",
     "rollout_func": "bit_count",
     "rollout_max_steps": 0
@@ -49,6 +49,21 @@
     },
     "entry_func": "main",
     "rollout_func": "sha_stream",
+    "rollout_max_steps": 0
+  },
+  {
+    "id": "cbench-network-dijkstra",
+    "description": "Dijkstra benchmark; training traces are collected for dijkstra.",
+    "sources_relative": [
+      "program/cbench-network-dijkstra/dijkstra_large.c"
+    ],
+    "profile_data": {
+      "kind": "text_file",
+      "filename": "dijkstra_input.txt",
+      "content": "4\n0 1 2 3\n1 0 1 2\n2 1 0 1\n3 2 1 0\n"
+    },
+    "entry_func": "main",
+    "rollout_func": "dijkstra",
     "rollout_max_steps": 0
   }
 ]

@@ -25,6 +25,21 @@ class BlockFeatures:
     out_degree: float
     max_out_prob: float
     mean_out_prob: float
+    branch_instr_count: float
+    conditional_branch_count: float
+    unconditional_branch_count: float
+    load_count: float
+    store_count: float
+    phi_count: float
+    has_return: float
+    has_indirect_branch: float
+    loop_depth: float
+    dom_tree_depth: float
+    terminator_conditional: float
+    terminator_unconditional: float
+    terminator_return: float
+    terminator_indirect: float
+    terminator_other: float
     embedding: Optional[torch.Tensor] = None
 
     @classmethod
@@ -39,7 +54,34 @@ class BlockFeatures:
             out_degree=float(deg),
             max_out_prob=float(max_p),
             mean_out_prob=float(mean_p),
-            embedding=None,
+            branch_instr_count=float(block.branch_instr_count),
+            conditional_branch_count=float(block.conditional_branch_count),
+            unconditional_branch_count=float(block.unconditional_branch_count),
+            load_count=float(block.load_count),
+            store_count=float(block.store_count),
+            phi_count=float(block.phi_count),
+            has_return=1.0 if block.has_return else 0.0,
+            has_indirect_branch=1.0 if block.has_indirect_branch else 0.0,
+            loop_depth=float(block.loop_depth),
+            dom_tree_depth=float(block.dom_tree_depth),
+            terminator_conditional=1.0
+            if block.terminator_kind == "conditional_branch"
+            else 0.0,
+            terminator_unconditional=1.0
+            if block.terminator_kind == "unconditional_branch"
+            else 0.0,
+            terminator_return=1.0 if block.terminator_kind == "return" else 0.0,
+            terminator_indirect=1.0
+            if block.terminator_kind == "indirect_branch"
+            else 0.0,
+            terminator_other=1.0
+            if block.terminator_kind in {"other", "branch", "call"}
+            else 0.0,
+            embedding=(
+                torch.tensor(list(block.ir2vec_embedding), dtype=torch.float32)
+                if block.ir2vec_embedding is not None
+                else None
+            ),
         )
 
     def as_tensor(
@@ -54,6 +96,21 @@ class BlockFeatures:
             self.out_degree,
             self.max_out_prob,
             self.mean_out_prob,
+            self.branch_instr_count,
+            self.conditional_branch_count,
+            self.unconditional_branch_count,
+            self.load_count,
+            self.store_count,
+            self.phi_count,
+            self.has_return,
+            self.has_indirect_branch,
+            self.loop_depth,
+            self.dom_tree_depth,
+            self.terminator_conditional,
+            self.terminator_unconditional,
+            self.terminator_return,
+            self.terminator_indirect,
+            self.terminator_other,
         ]
         base = torch.tensor(parts, device=device, dtype=dtype)
         if self.embedding is None:
@@ -63,4 +120,4 @@ class BlockFeatures:
 
     @property
     def base_dim(self) -> int:
-        return 5
+        return 20

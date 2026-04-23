@@ -45,6 +45,9 @@ class FeatureWindowLstmPolicy(nn.Module):
             batch_first=True,
         )
         self._head = nn.Linear(int(lstm_hidden), self._max_actions)
+        self._edge_hist = nn.Linear(int(lstm_hidden), int(lstm_hidden))
+        self._edge_feat = nn.Linear(self._feat_dim, int(lstm_hidden))
+        self._edge_out = nn.Linear(int(lstm_hidden), 1)
 
     @property
     def max_actions(self) -> int:
@@ -87,7 +90,30 @@ class FeatureWindowLstmPolicy(nn.Module):
         action_mask: optional (batch, seq, max_actions) bool True = allowed
         """
         out, hx_out = self._lstm(x, hx)
-        logits = self._head(out)
+        if self._succ_feat_slots > 0:
+            succ_start = self._window_back * self._feat_dim
+            succ_end = succ_start + self._succ_feat_slots * self._feat_dim
+            succ_flat = x[:, :, succ_start:succ_end]
+            succ = succ_flat.view(
+                x.shape[0], x.shape[1], self._succ_feat_slots, self._feat_dim
+            )
+            if self._succ_feat_slots < self._max_actions:
+                pad = torch.zeros(
+                    x.shape[0],
+                    x.shape[1],
+                    self._max_actions - self._succ_feat_slots,
+                    self._feat_dim,
+                    dtype=x.dtype,
+                    device=x.device,
+                )
+                succ = torch.cat([succ, pad], dim=2)
+            elif self._succ_feat_slots > self._max_actions:
+                succ = succ[:, :, : self._max_actions, :]
+            h = self._edge_hist(out).unsqueeze(2)  # (B,T,1,H)
+            e = self._edge_feat(succ)  # (B,T,A,H)
+            logits = self._edge_out(torch.tanh(h + e)).squeeze(-1)  # (B,T,A)
+        else:
+            logits = self._head(out)
         if action_mask is not None:
             logits = logits.masked_fill(~action_mask, -1e9)
         return logits, hx_out

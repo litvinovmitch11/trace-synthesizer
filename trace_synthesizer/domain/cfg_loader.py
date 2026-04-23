@@ -32,6 +32,20 @@ def _parse_block(raw: dict[str, Any]) -> BasicBlock:
         instr_count=int(raw.get("instr_count", 0)),
         has_call=bool(raw.get("has_call", False)),
         call_target=str(raw["call_target"]) if raw.get("call_target") else None,
+        branch_instr_count=int(raw.get("branch_instr_count", 0)),
+        conditional_branch_count=int(raw.get("conditional_branch_count", 0)),
+        unconditional_branch_count=int(raw.get("unconditional_branch_count", 0)),
+        load_count=int(raw.get("load_count", 0)),
+        store_count=int(raw.get("store_count", 0)),
+        phi_count=int(raw.get("phi_count", 0)),
+        has_return=bool(raw.get("has_return", False)),
+        has_indirect_branch=bool(raw.get("has_indirect_branch", False)),
+        loop_depth=int(raw.get("loop_depth", 0)),
+        dom_tree_depth=int(raw.get("dom_tree_depth", 0)),
+        terminator_kind=str(raw.get("terminator_kind", "none")),
+        ir2vec_embedding=tuple(float(x) for x in raw.get("ir2vec_embedding", []))
+        if raw.get("ir2vec_embedding") is not None
+        else None,
         successors=tuple(succs),
     )
 
