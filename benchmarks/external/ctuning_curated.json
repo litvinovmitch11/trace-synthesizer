@@ -1,0 +1,21 @@
+[
+  {
+    "id": "cbench-automotive-bitcount",
+    "description": "cBench bitcount; ``bit_count`` has a real CFG (``bitcount`` symbol is a degenerate single-block graph in LLVM output).",
+    "sources_relative": [
+      "program/cbench-automotive-bitcount/bitarray.c",
+      "program/cbench-automotive-bitcount/bitcnts.c",
+      "program/cbench-automotive-bitcount/bitcnt_1.c",
+      "program/cbench-automotive-bitcount/bitcnt_2.c",
+      "program/cbench-automotive-bitcount/bitcnt_3.c",
+      "program/cbench-automotive-bitcount/bitcnt_4.c",
+      "program/cbench-automotive-bitcount/bitfiles.c",
+      "program/cbench-automotive-bitcount/bitstrng.c",
+      "program/cbench-automotive-bitcount/bstr_i.c"
+    ],
+    "profile_argv": ["250000"],
+    "entry_func": "main",
+    "rollout_func": "bit_count",
+    "rollout_max_steps": 0
+  }
+]

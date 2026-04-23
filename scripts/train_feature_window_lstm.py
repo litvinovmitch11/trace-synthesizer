@@ -21,6 +21,7 @@ import torch.nn.functional as F
 from trace_synthesizer.agents.cfg_supervision import (
     GLOBAL_CFG_SUMMARY_DIM,
     trace_context_tensors_for_bb_path,
+    successor_action_index,
 )
 from trace_synthesizer.agents.checkpoint import (
     build_policy_from_meta,
@@ -163,6 +164,18 @@ def main() -> None:
         grammar = CfgProgram.from_cfg_json(cfg_p)
         env = CFGWalkEnv(grammar, func, max_steps=50_000, seed=args.seed, device=device)
         bb_path = _bb_path_from_intra(seq, func)
+        if not bb_path:
+            skipped += 1
+            continue
+        valid_path = [bb_path[0]]
+        for a, b in zip(bb_path, bb_path[1:]):
+            if successor_action_index(grammar, func, a, b) is None:
+                break
+            valid_path.append(b)
+        
+        # limit sequence length so memory doesn't explode
+        bb_path = valid_path[:2000]
+
         try:
             win_np, mask_np, tgt_np = trace_context_tensors_for_bb_path(
                 env,

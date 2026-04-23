@@ -1,77 +1,53 @@
-# Воспроизводимость и приёмка (RU)
+# Воспроизведение (RU)
 
-**Версии.** LLVM 21 (цепочка `clang-21` / `clang++-21` и утилиты `llvm-readobj`, `llc` из того же префикса установки), Python 3.12+, зависимости через Poetry (`pyproject.toml`).
+## Требования
 
-**Формулировка бейзлайна.** *Бейзлайн* — марковские прогулки `RandomPGOAgent` по грамматике CFG из LLVM; *ML-ready* — те же JSON-трассы (`bb_trace`), те же хуки метрик и сменная политика за протоколом `Agent`.
+- LLVM toolchain (совместимый с проектом, путь по умолчанию в `Makefile`).
+- Python + Poetry.
+- Хотя бы раз выполненный `make configure`.
+- Доступный cBench через `ctuning-bootstrap` (submodule/линк).
 
-## Окружение
-
-```bash
-export LLVM_INSTALL_DIR=/path/to/llvm-project/build-install   # для CMake/Makefile
-export LLVM_DIR="$LLVM_INSTALL_DIR"                             # для scripts/*.sh (эквивалентно)
-export PATH="$LLVM_INSTALL_DIR/bin:$PATH"
-```
-
-## Python
+## Полный прогон end-to-end
 
 ```bash
-cd /path/to/trace-synthesizer
-poetry install
-```
-
-## Сборка нативных частей
-
-```bash
-make configure
+make clean-output
 make build
-./scripts/check_baseline.sh    # также входит в `make check`
+make plugins-demo
+make random-baseline
+make dataset-cbench
+make train-lstm
+make lstm-eval
 ```
 
-## Тесты
+## Ожидаемые артефакты
+
+- Демо плагинов: `output/plugins_demo/*`
+- Метрики бейзлайна: `output/random_baseline/results/metrics_random.json`
+- cBench-датасет: `output/dataset_cbench/dataset/cross.train.jsonl`
+- LSTM-модель: `output/train_lstm/model.pt`
+- Лог обучения LSTM: `output/train_lstm/train.log`
+- Метрики LSTM: `output/lstm_eval/results/metrics_lstm.json`
+- Визуализации:
+  - `output/random_baseline/rollouts_random/viz_random_trace.svg`
+  - `output/lstm_eval/rollouts_lstm/viz_lstm_trace.svg`
+  - `output/lstm_eval/results/viz_real_trace.svg`
+
+## Сравнение двух наборов трасс
 
 ```bash
-make test-py
+make compare-traces \
+  REF=output/lstm_eval/reference_real_intra.json \
+  CAND=output/lstm_eval/rollouts_lstm/intra_traces.jsonl \
+  FUNC=main \
+  OUT=output/lstm_eval/results/metrics_pair_lstm_vs_real.json
 ```
 
-## E2e на одном примере
+## Ручная отрисовка CFG + trace overlay
 
 ```bash
-make e2e-pipeline FILE=benchmarks/local/benchmark_complex.cpp ARGS=""
+make visualize-trace \
+  CFG=output/lstm_eval/benchmark_complex.cfg.json \
+  FUNC=main \
+  TRACE=output/lstm_eval/rollouts_lstm/intra_traces.jsonl \
+  OUT=output/lstm_eval/rollouts_lstm/viz_manual
 ```
-
-## benchmark_complex
-
-```bash
-make benchmark-complex
-# подробные команды: docs/ru/BENCHMARK_COMPLEX_MANUAL.md (EN: docs/en/BENCHMARK_COMPLEX_MANUAL.md)
-```
-
-## Ctuning и статистика
-
-```bash
-git submodule update --init --recursive external/ctuning-programs
-# или: make ctuning-bootstrap
-make ctuning-rollout CTUNING_ARGS='--only cbench-telecom-crc32 --episodes 5 --max-steps 3000 --seed 0'
-# по умолчанию: output/ctuning_curated_stats.json
-```
-
-## CRC32: пара трасс и SVG
-
-После появления `output/ctuning_cbench-telecom-crc32/*.cfg.json` и `*.compressed_trace.json`:
-
-```bash
-./scripts/ctuning_crc32_paired_traces_and_viz.sh
-```
-
-## Чеклист приёмки (чистый клон)
-
-1. **Сборка:** `make configure && make build` — `CFGDumper.so`, `InstrTracer`, `drrun` на месте.
-2. **Канон intra:** `export-intra-trace` и `--write-canonical-intra` дают одинаковую схему (`bb_trace`); см. `trace_synthesizer/io/intra_trace.py`, тесты `tests/test_intra_canonical.py`.
-3. **Генератор:** `rollout-random` + `RandomPGOAgent` + `CFGWalkEnv` — см. тесты `tests/test_cfg_walk_*.py`, `tests/test_runner_paths_jsonl.py`.
-4. **Метрики:** `metrics-compare` и `metrics-bench-speed` — `tests/test_metrics_e2e.py` на `benchmark_complex`.
-5. **Курируемый набор:** `make ctuning-rollout` пишет `output/ctuning_curated_stats.json`; `--skip-pipeline` только при уже собранных артефактах.
-6. **Визуализация:** `scripts/ctuning_crc32_paired_traces_and_viz.sh` — пара SVG при наличии crc32-артефактов.
-
-`make check` = `make test-py` + `scripts/check_baseline.sh` (подмножество пункта 1).
-
-English: [../en/REPRODUCTION.md](../en/REPRODUCTION.md).

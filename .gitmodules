@@ -1,3 +1,3 @@
-[submodule "external/ctuning-programs"]
-	path = external/ctuning-programs
+[submodule "benchmarks/external/ctuning-programs"]
+	path = benchmarks/external/ctuning-programs
 	url = https://github.com/ctuning/ctuning-programs.git

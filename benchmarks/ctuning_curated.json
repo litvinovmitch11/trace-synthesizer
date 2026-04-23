@@ -1,39 +1,5 @@
 [
   {
-    "id": "shared-matmul-c",
-    "description": "Matmul demo; Dynamo trace uses ``main`` only (kernel inlined), so rollouts/metrics use ``main``.",
-    "sources_relative": ["program/shared-matmul-c/matmul.c"],
-    "profile_env": {
-      "CT_MATRIX_DIMENSION": "96",
-      "CT_REPEAT_MAIN": "3"
-    },
-    "profile_data": {
-      "kind": "float_space_separated",
-      "float_count": 16,
-      "value": "0.25"
-    },
-    "entry_func": "main",
-    "rollout_func": "main",
-    "rollout_max_steps": 0
-  },
-  {
-    "id": "shared-matmul-c2",
-    "description": "Matmul variant; same as shared-matmul-c — Dynamo ``main`` only.",
-    "sources_relative": ["program/shared-matmul-c2/matmul.c"],
-    "profile_env": {
-      "CT_MATRIX_DIMENSION": "64",
-      "CT_REPEAT_MAIN": "2"
-    },
-    "profile_data": {
-      "kind": "float_space_separated",
-      "float_count": 16,
-      "value": "0.1"
-    },
-    "entry_func": "main",
-    "rollout_func": "main",
-    "rollout_max_steps": 0
-  },
-  {
     "id": "cbench-automotive-bitcount",
     "description": "cBench bitcount; ``bit_count`` has a real CFG (``bitcount`` symbol is a degenerate single-block graph in LLVM output).",
     "sources_relative": [
@@ -54,15 +20,15 @@
   },
   {
     "id": "cbench-telecom-crc32",
-    "description": "CRC-32; ``main1`` is the file-processing routine.",
+    "description": "CRC32 benchmark; training traces are collected for main1.",
     "sources_relative": [
       "program/cbench-telecom-crc32/crc_32.c",
       "program/cbench-telecom-crc32/ctuning-rtl.c"
     ],
     "profile_data": {
       "kind": "text_file",
-      "filename": "crc32_profile_input.txt",
-      "content": "ctuning crc32 profile payload\n"
+      "filename": "crc32_input.txt",
+      "content": "trace synthesizer crc32 input\n"
     },
     "entry_func": "main",
     "rollout_func": "main1",
@@ -70,7 +36,7 @@
   },
   {
     "id": "cbench-security-sha",
-    "description": "SHA; ``sha_stream`` is the hashing loop.",
+    "description": "SHA benchmark; training traces are collected for sha_stream.",
     "sources_relative": [
       "program/cbench-security-sha/sha.c",
       "program/cbench-security-sha/sha_driver.c",
@@ -78,7 +44,7 @@
     ],
     "profile_data": {
       "kind": "text_file",
-      "filename": "sha_profile_input.txt",
+      "filename": "sha_input.txt",
       "content": "The quick brown fox jumps over the lazy dog.\n"
     },
     "entry_func": "main",
