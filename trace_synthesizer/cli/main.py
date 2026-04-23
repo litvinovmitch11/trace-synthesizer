@@ -249,6 +249,83 @@ def cmd_rollout_random(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_rollout_lstm(args: argparse.Namespace) -> int:
+    import torch
+
+    from trace_synthesizer.agents.checkpoint import (
+        POLICY_TYPE_FEATURE_WINDOW_LSTM,
+        load_policy_checkpoint,
+    )
+    from trace_synthesizer.agents.feature_window_lstm_agent import (
+        FeatureWindowLSTMCfgAgent,
+    )
+    from trace_synthesizer.env.cfg_walk_env import CFGWalkEnv
+    from trace_synthesizer.io.intra_trace import (
+        dump_canonical_intra_json,
+        intra_sequence_from_bb_path,
+    )
+    from trace_synthesizer.runner.rollout import rollout_episode
+    from trace_synthesizer.runner.stats import summarize_rollouts
+    from trace_synthesizer.runner.writers import (
+        write_episodes_jsonl,
+        write_intra_traces_jsonl,
+        write_summary_json,
+    )
+
+    device = torch.device(args.device)
+    grammar = CfgProgram.from_cfg_json(args.cfg)
+    env = CFGWalkEnv(
+        grammar,
+        args.func,
+        max_steps=args.max_steps,
+        seed=args.seed,
+        device=device,
+    )
+    policy = None
+    meta: dict = {}
+    ck = getattr(args, "checkpoint", None)
+    if ck:
+        policy, meta = load_policy_checkpoint(Path(ck), device=device)
+
+    episodes = []
+    rng_seed = args.seed
+    for ep in range(args.episodes):
+        rs = (rng_seed + ep) if rng_seed is not None else None
+        if rs is not None:
+            torch.manual_seed(rs)
+        agent = FeatureWindowLSTMCfgAgent(
+            grammar,
+            args.func,
+            env,
+            device=device,
+            action_select=args.action_select,
+            seed=rs,
+            checkpoint_stem=None if policy is not None else ck,
+            policy=policy,
+        )
+        if policy is None:
+            policy = agent.policy
+        episodes.append(rollout_episode(env, agent, reset_seed=rs))
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    summary = summarize_rollouts(episodes)
+    write_episodes_jsonl(out_dir / "runs.jsonl", episodes, seed=args.seed or 0)
+    write_intra_traces_jsonl(out_dir / "intra_traces.jsonl", episodes, args.func)
+    write_summary_json(out_dir / "summary.json", summary)
+    wpath = getattr(args, "write_canonical_intra", None)
+    if wpath and episodes:
+        ep0 = episodes[0]
+        seq = intra_sequence_from_bb_path(
+            args.func, ep0.entry_bb_id, [s.to_bb for s in ep0.steps]
+        )
+        dump_canonical_intra_json(
+            wpath, function_name=args.func, sequence=seq, episode=None
+        )
+        print(f"Wrote canonical intra (episode 0): {wpath}", flush=True)
+    print(summary.to_dict())
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="python -m trace_synthesizer")
     p.add_argument("-v", "--verbose", action="store_true")
@@ -363,7 +440,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--cpp",
         type=Path,
         default=None,
-        help="Source .cpp (default: examples/benchmark_complex/benchmark_complex.cpp)",
+        help="Source .cpp (default: benchmarks/local/benchmark_complex.cpp)",
     )
     bc.add_argument(
         "--out-dir",
@@ -469,6 +546,46 @@ def build_parser() -> argparse.ArgumentParser:
         help="Also write first episode as a single canonical intra JSON (schema identical to export-intra-trace)",
     )
     r.set_defaults(handler=cmd_rollout_random)
+
+    lstm = sub.add_parser(
+        "rollout-lstm",
+        help="LSTM policy rollouts for one function (same outputs as rollout-random)",
+    )
+    lstm.add_argument("--cfg", required=True)
+    lstm.add_argument("--func", required=True)
+    lstm.add_argument("--episodes", type=int, default=10)
+    lstm.add_argument("--seed", type=int, default=None)
+    lstm.add_argument(
+        "--max-steps",
+        type=int,
+        default=10_000,
+        help="Same semantics as rollout-random (0 = walk until CFG sink).",
+    )
+    lstm.add_argument("--out-dir", required=True)
+    lstm.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=None,
+        help="Stem path to policy .pt + .json (from save_policy_checkpoint); optional if fresh random init",
+    )
+    lstm.add_argument(
+        "--action-select",
+        choices=("argmax", "sample"),
+        default="argmax",
+        help="How to pick an action from masked logits",
+    )
+    lstm.add_argument(
+        "--device",
+        default="cpu",
+        help="torch device string (e.g. cpu, cuda)",
+    )
+    lstm.add_argument(
+        "--write-canonical-intra",
+        type=Path,
+        default=None,
+        help="Also write first episode as a single canonical intra JSON",
+    )
+    lstm.set_defaults(handler=cmd_rollout_lstm)
 
     return p
 

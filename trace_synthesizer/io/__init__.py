@@ -20,6 +20,7 @@ from trace_synthesizer.io.intra_trace import (
     intra_sequence_from_bb_path,
     intra_sequence_from_compressed,
     load_intra_trace_bbs_for_visualize,
+    try_intra_record_from_compressed,
 )
 
 __all__ = [
@@ -32,6 +33,7 @@ __all__ = [
     "dedupe_consecutive_func_bb",
     "dump_canonical_intra_json",
     "export_intra_trace_from_compressed_file",
+    "try_intra_record_from_compressed",
     "intra_sequence_from_bb_path",
     "intra_sequence_from_compressed",
     "load_intra_trace_bbs_for_visualize",

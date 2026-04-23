@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Sequence
+from typing import Any
 
 from trace_synthesizer.agents.protocol import Agent
 
@@ -35,10 +35,20 @@ class EpisodeRollout:
 def rollout_episode(
     env: Any, agent: Agent, *, reset_seed: int | None = None
 ) -> EpisodeRollout:
+    """
+    Roll out one episode.
+
+    If ``agent`` defines ``on_episode_start`` (no arguments), it is called after
+    ``env.reset`` so stateful agents (e.g. LSTM hidden state) can clear memory per
+    episode. Stateless agents do not need this hook.
+    """
     if reset_seed is not None:
         obs, info = env.reset(seed=reset_seed)
     else:
         obs, info = env.reset()
+    hook = getattr(agent, "on_episode_start", None)
+    if callable(hook):
+        hook()
     entry_bb_id = int(obs["bb_id"][0])
     if info.get("terminal"):
         return EpisodeRollout(

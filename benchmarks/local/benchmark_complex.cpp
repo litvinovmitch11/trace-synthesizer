@@ -113,5 +113,8 @@ int main(int argc, char** argv) {
 
     const int out = merge_before_return(acc, seed % 91, argc);
     std::cout << out << '\n';
-    return (out == 0) ? 0 : (out & 1);
+    // Always exit 0 on success so shell pipelines (`set -e`, PGO collection) do not
+    // treat a non-zero parity of `out` as a hard failure.
+    (void)out;
+    return 0;
 }

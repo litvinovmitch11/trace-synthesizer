@@ -36,7 +36,7 @@ make test-py
 ## E2e на одном примере
 
 ```bash
-make e2e-pipeline FILE=examples/complex.cpp ARGS=""
+make e2e-pipeline FILE=benchmarks/local/benchmark_complex.cpp ARGS=""
 ```
 
 ## benchmark_complex

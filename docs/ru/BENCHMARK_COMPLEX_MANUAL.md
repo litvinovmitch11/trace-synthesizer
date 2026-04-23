@@ -1,6 +1,6 @@
 # Ручной запуск benchmark_complex (C++ плагины + Python)
 
-Документ описывает **полный** путь: реальный исходник `examples/benchmark_complex/benchmark_complex.cpp` → профиль PGO → LLVM `llc` с плагином **CFGDumper** → бинарь с `.llvm_bb_addr_map` → **DynamoRIO** с клиентом **InstrTracer** → сжатие/валидация и метрики в Python.
+Документ описывает **полный** путь: реальный исходник `benchmarks/local/benchmark_complex.cpp` → профиль PGO → LLVM `llc` с плагином **CFGDumper** → бинарь с `.llvm_bb_addr_map` → **DynamoRIO** с клиентом **InstrTracer** → сжатие/валидация и метрики в Python.
 
 **Единая точка входа (рекомендуется):**
 
@@ -46,13 +46,13 @@ test -f build/_deps/dynamorio_pkg-src/bin64/drrun
 
 ## 1. Автоматический полный прогон (эквивалент `run_benchmark_complex.sh` части C++)
 
-Источник по умолчанию: `examples/benchmark_complex/benchmark_complex.cpp`. Аргументы после имени файла передаются **исполняемому бинарнику** на этапе сбора профиля (шаг 2 пайплайна).
+Источник по умолчанию: `benchmarks/local/benchmark_complex.cpp`. Аргументы после имени файла передаются **исполняемому бинарнику** на этапе сбора профиля (шаг 2 пайплайна).
 
 ```bash
 export OUT_DIR="${OUT_DIR:-output}"
-./scripts/full_pipeline.sh examples/benchmark_complex/benchmark_complex.cpp
+./scripts/full_pipeline.sh benchmarks/local/benchmark_complex.cpp
 # с аргументами для бинарника:
-./scripts/full_pipeline.sh examples/benchmark_complex/benchmark_complex.cpp my_arg
+./scripts/full_pipeline.sh benchmarks/local/benchmark_complex.cpp my_arg
 ```
 
 Результат в `$OUT_DIR/` (при `OUT_DIR=output` и имени файла `benchmark_complex`):
@@ -84,7 +84,7 @@ export LLC="$LLVM_DIR/bin/llc"
 export LLVM_READOBJ="$LLVM_DIR/bin/llvm-readobj"
 export OUT_DIR="${OUT_DIR:-output}"
 export BASENAME=benchmark_complex
-export INPUT_FILE="examples/benchmark_complex/benchmark_complex.cpp"
+export INPUT_FILE="benchmarks/local/benchmark_complex.cpp"
 export PLUGIN_SO="build/src/CFGDumper/CFGDumper.so"
 export DRRUN="build/_deps/dynamorio_pkg-src/bin64/drrun"
 export TRACER_SO="build/src/InstrTracer/libInstrTracer.so"
@@ -209,7 +209,7 @@ poetry run python3 -m trace_synthesizer metrics-bench-speed \
 
 | Переменная | По умолчанию | Смысл |
 |------------|--------------|--------|
-| `BENCHMARK_CPP` | `examples/benchmark_complex/benchmark_complex.cpp` | Исходник для пайплайна |
+| `BENCHMARK_CPP` | `benchmarks/local/benchmark_complex.cpp` | Исходник для пайплайна |
 | `OUT_DIR` | `output` | Каталог всех артефактов |
 | `FUNC` | `main` | Имя функции для Python-команд |
 | `SKIP_ANALYSIS` | `0` | `1` — только `full_pipeline.sh`, без rollout/metrics |

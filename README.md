@@ -2,9 +2,21 @@
 
 Research pipeline that couples **LLVM Machine IR CFGs** (with PGO edge weights) to **DynamoRIO instruction traces**, compresses them to basic-block sequences, and compares **ground-truth** runs against **synthetic** traces generated on the same CFG grammar.
 
-**Current stage.** A reproducible **baseline**: Markov random walks driven by normalized PGO weights (`RandomPGOAgent` + `CFGWalkEnv`). The stack is **ML-ready** in the sense that trace JSON (`bb_trace`), compression/validation, metrics, and Gymnasium hooks stay fixed while the policy behind the agent protocol can be swapped for trainable models.
+## Текущие возможности проекта (Current Capabilities)
 
-**One-line contract.** *Baseline* = RandomPGO on the CFG grammar; *ML-ready* = same trace formats, same metric entry points, swappable agent.
+В рамках проекта реализован полный пайплайн от сбора данных до обучения простой нейросетевой модели:
+
+1. **LLVM Плагин (CFGDumper)**: Извлечение графа потока управления (CFG) на уровне Machine IR вместе с профилировочной информацией (PGO).
+2. **DynamoRIO Трейсер (InstrTracer)**: Сбор реальных инструкционных трасс программы.
+3. **Описание программы как среды (RL Environment)**: Среда на Python (`CFGWalkEnv`), совместимая с Gymnasium, валидирующая легальность переходов по CFG.
+4. **Вероятностный бейзлайн (Random PGO Agent)**: Агент, совершающий марковские случайные блуждания по графу пропорционально PGO-весам.
+5. **Нейросетевая модель (Feature-Window LSTM)**: Архитектура LSTM (`feature_window_lstm_agent.py`), которая независима от конкретного CFG. Обучается на корпусе данных с дефолтными признаками блоков (`BlockFeatures`).
+6. **Обучение LSTM**: Скрипт `train_feature_window_lstm.py` для тренировки модели на собранном корпусе данных.
+7. **Сборка датасета**: Скрипт `build_multi_program_intra_dataset.py` для формирования общего корпуса трасс из разных программ.
+8. **Валидация и метрики**: Модуль метрик (KL-дивергенция частот блоков/ребер, Hot-Path Accuracy, оценка ускорения генерации) и скрипты для автоматической валидации сгенерированных трасс (`run_production_validation_experiment.sh`, `summarize_production_validation.py`).
+9. **Визуализация и аналитика**: Вспомогательные методы для отрисовки трассы поверх CFG среды. Единый Jupyter-ноутбук (`notebooks/lstm_training_and_metrics.ipynb`) для визуализации графов, запуска обучения LSTM и отрисовки графиков метрик.
+10. **Бенчмарки**: Поддержка внешних бенчмарков (`cbench`/`ctuning`) и локального ручного комплексного примера (`benchmarks/local/benchmark_complex.cpp`).
+11. **Расширяемость**: Архитектура содержит заготовки (протоколы и стабы) под других агентов (включая RL) и подключение новых фич (например, эмбеддингов IR2Vec/MIR2Vec).
 
 ## Documentation
 
@@ -16,7 +28,6 @@ Documentation is split by language under `docs/en/` and `docs/ru/` (mirrored fil
 - Overview: [docs/en/Documentation.md](docs/en/Documentation.md), [docs/ru/Documentation.md](docs/ru/Documentation.md).
 - Metrics index: [docs/en/METRICS_AND_TRACE_ML_INFRASTRUCTURE.md](docs/en/METRICS_AND_TRACE_ML_INFRASTRUCTURE.md), [docs/ru/METRICS_AND_TRACE_ML_INFRASTRUCTURE.md](docs/ru/METRICS_AND_TRACE_ML_INFRASTRUCTURE.md).
 - Ctuning: [docs/en/CTUNING_PROGRAMS.md](docs/en/CTUNING_PROGRAMS.md), [docs/ru/CTUNING_PROGRAMS.md](docs/ru/CTUNING_PROGRAMS.md); core experiment: [docs/en/CTUNING_CORE_EXPERIMENT.md](docs/en/CTUNING_CORE_EXPERIMENT.md), [docs/ru/CTUNING_CORE_EXPERIMENT.md](docs/ru/CTUNING_CORE_EXPERIMENT.md).
-- `benchmark_complex` manual: [docs/en/BENCHMARK_COMPLEX_MANUAL.md](docs/en/BENCHMARK_COMPLEX_MANUAL.md), [docs/ru/BENCHMARK_COMPLEX_MANUAL.md](docs/ru/BENCHMARK_COMPLEX_MANUAL.md).
 
 ## Prerequisites
 
@@ -38,7 +49,7 @@ make check          # pytest + lightweight native artifact checks
 End-to-end on one example:
 
 ```bash
-make e2e-pipeline FILE=examples/complex.cpp ARGS=""
+make e2e-pipeline FILE=benchmarks/local/benchmark_complex.cpp ARGS=""
 ```
 
 Curated ctuning rollouts (needs submodule):
@@ -46,12 +57,6 @@ Curated ctuning rollouts (needs submodule):
 ```bash
 make ctuning-bootstrap
 make ctuning-rollout CTUNING_ARGS='--only cbench-telecom-crc32 --episodes 5 --max-steps 3000 --seed 0'
-```
-
-Paired CRC32 visualization (after crc32 artifacts exist):
-
-```bash
-./scripts/ctuning_crc32_paired_traces_and_viz.sh
 ```
 
 ## Make targets
@@ -74,4 +79,4 @@ poetry run python -m trace_synthesizer metrics-compare \
   --func main --out output/metrics_report.json
 ```
 
-Shell scripts honor `LLVM_DIR` or `LLVM_INSTALL_DIR` (see `scripts/full_pipeline.sh`, `scripts/generate_cfg.sh`, `scripts/ctuning_full_pipeline_c.sh`).
+Shell scripts honor `LLVM_DIR` or `LLVM_INSTALL_DIR` (see scripts in `scripts/`).

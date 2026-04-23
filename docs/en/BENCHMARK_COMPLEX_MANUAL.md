@@ -1,6 +1,6 @@
 # Manual `benchmark_complex` run (C++ plugins + Python)
 
-This document describes the **full** path: real source `examples/benchmark_complex/benchmark_complex.cpp` → PGO profile → LLVM `llc` with **CFGDumper** → binary with `.llvm_bb_addr_map` → **DynamoRIO** with **InstrTracer** → Python compress/validate and metrics.
+This document describes the **full** path: real source `benchmarks/local/benchmark_complex.cpp` → PGO profile → LLVM `llc` with **CFGDumper** → binary with `.llvm_bb_addr_map` → **DynamoRIO** with **InstrTracer** → Python compress/validate and metrics.
 
 **Preferred entry points:**
 
@@ -46,13 +46,13 @@ test -f build/_deps/dynamorio_pkg-src/bin64/drrun
 
 ## 1. Full automated C++ path (same as the first half of `run_benchmark_complex.sh`)
 
-Default source: `examples/benchmark_complex/benchmark_complex.cpp`. Arguments after the file name are forwarded to the **instrumented profiling binary** in pipeline step 2.
+Default source: `benchmarks/local/benchmark_complex.cpp`. Arguments after the file name are forwarded to the **instrumented profiling binary** in pipeline step 2.
 
 ```bash
 export OUT_DIR="${OUT_DIR:-output}"
-./scripts/full_pipeline.sh examples/benchmark_complex/benchmark_complex.cpp
+./scripts/full_pipeline.sh benchmarks/local/benchmark_complex.cpp
 # with arguments for the binary:
-./scripts/full_pipeline.sh examples/benchmark_complex/benchmark_complex.cpp my_arg
+./scripts/full_pipeline.sh benchmarks/local/benchmark_complex.cpp my_arg
 ```
 
 Artifacts in `$OUT_DIR/` (with `OUT_DIR=output` and stem `benchmark_complex`):
@@ -82,7 +82,7 @@ export LLC="$LLVM_DIR/bin/llc"
 export LLVM_READOBJ="$LLVM_DIR/bin/llvm-readobj"
 export OUT_DIR="${OUT_DIR:-output}"
 export BASENAME=benchmark_complex
-export INPUT_FILE="examples/benchmark_complex/benchmark_complex.cpp"
+export INPUT_FILE="benchmarks/local/benchmark_complex.cpp"
 export PLUGIN_SO="build/src/CFGDumper/CFGDumper.so"
 export DRRUN="build/_deps/dynamorio_pkg-src/bin64/drrun"
 export TRACER_SO="build/src/InstrTracer/libInstrTracer.so"
@@ -207,7 +207,7 @@ poetry run python3 -m trace_synthesizer metrics-bench-speed \
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `BENCHMARK_CPP` | `examples/benchmark_complex/benchmark_complex.cpp` | Source for the pipeline |
+| `BENCHMARK_CPP` | `benchmarks/local/benchmark_complex.cpp` | Source for the pipeline |
 | `OUT_DIR` | `output` | Artifact directory |
 | `FUNC` | `main` | Function name for Python commands |
 | `SKIP_ANALYSIS` | `0` | `1` → only `full_pipeline.sh`, no rollout/metrics |

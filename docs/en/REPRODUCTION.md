@@ -37,7 +37,7 @@ poetry run pytest tests/ -q
 ## End-to-end on one example
 
 ```bash
-make e2e-pipeline FILE=examples/complex.cpp ARGS=""
+make e2e-pipeline FILE=benchmarks/local/benchmark_complex.cpp ARGS=""
 # artifacts under output/
 ```
 

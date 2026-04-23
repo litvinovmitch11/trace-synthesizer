@@ -18,7 +18,7 @@ from trace_synthesizer.runner.rollout import rollout_episode
 from trace_synthesizer.runner.writers import write_intra_traces_jsonl
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-COMPLEX_CFG = REPO_ROOT / "examples" / "benchmark_complex" / "main.cfg.json"
+COMPLEX_CFG = REPO_ROOT / "tests" / "fixtures" / "benchmark_complex" / "main.cfg.json"
 
 
 def test_complex_cfg_loads() -> None:

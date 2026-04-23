@@ -33,6 +33,10 @@ class MaskedLstmPolicyStub(nn.Module):
         )
         self._head = nn.Linear(lstm_hidden, max_actions)
 
+    @property
+    def max_actions(self) -> int:
+        return self._max_actions
+
     def forward(
         self,
         bb_ids: torch.Tensor,

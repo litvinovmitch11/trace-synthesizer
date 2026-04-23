@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from trace_synthesizer.io.compress_pipeline import load_compressed_trace_json
 
@@ -90,18 +90,42 @@ def build_intra_trace_record(
     )
 
 
+def try_intra_record_from_compressed(
+    compressed_path: str | Path,
+    function_name: str,
+    *,
+    episode: int | None = None,
+    extra_fields: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """
+    Build one canonical intra record from a compressed global trace, or ``None`` if
+    the slice for ``function_name`` is too short for supervision (needs >=2 events).
+    Optional ``extra_fields`` are merged in (e.g. ``program_id``, ``source_compressed``).
+    """
+    compressed = load_compressed_trace_json(compressed_path)
+    seq = intra_sequence_from_compressed(compressed, function_name)
+    if len(seq) < 2:
+        return None
+    rec: dict[str, Any] = canonical_intra_trace_record(
+        function_name=function_name,
+        sequence=seq,
+        episode=episode,
+    )
+    if extra_fields:
+        rec.update(extra_fields)
+    return rec
+
+
 def export_intra_trace_from_compressed_file(
     compressed_path: str | Path,
     function_name: str,
     out_path: str | Path,
 ) -> None:
-    compressed = load_compressed_trace_json(compressed_path)
-    seq = intra_sequence_from_compressed(compressed, function_name)
-    rec = canonical_intra_trace_record(
-        function_name=function_name,
-        sequence=seq,
-        episode=None,
-    )
+    rec = try_intra_record_from_compressed(compressed_path, function_name, episode=None)
+    if rec is None:
+        raise ValueError(
+            f"{compressed_path}: no intra sequence for {function_name!r} (need >=2 events)"
+        )
     Path(out_path).write_text(
         json.dumps(rec, indent=2, sort_keys=False) + "\n", encoding="utf-8"
     )

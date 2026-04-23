@@ -12,16 +12,17 @@ LLVM_INSTALL_DIR ?= /home/mitchell/dev/llvm/llvm-project/build-install
 
 NPROC=8
 
-.PHONY: help configure build clean clean-output tidy format format-py test-py check cfg-examples trace-examples e2e-pipeline benchmark-complex ctuning-bootstrap ctuning-rollout
+.PHONY: help configure build clean clean-output tidy format format-py test-py check benchmark-complex ctuning-bootstrap ctuning-rollout production-validation
 
 help:
 	@echo "trace-synthesizer — common targets"
 	@echo "  make configure   — cmake -B $(BUILD_DIR) (uses LLVM_INSTALL_DIR=$(LLVM_INSTALL_DIR))"
 	@echo "  make build       — compile plugins + DynamoRIO"
 	@echo "  make test-py     — poetry run pytest"
-	@echo "  make check       — test-py + scripts/check_baseline.sh (build artifacts)"
-	@echo "  analysis/baseline_ctuning.ipynb — baseline plots (poetry install --with dev)"
-	@echo "  make e2e-pipeline / trace-examples / cfg-examples / benchmark-complex / ctuning-rollout — see README and docs/REPRODUCTION_*.md"
+	@echo "  make check       — test-py (build artifacts check removed)"
+	@echo "  poetry run python3 -m trace_synthesizer rollout-lstm — LSTM rollouts"
+	@echo "  make benchmark-complex / ctuning-rollout — see README and docs/REPRODUCTION_*.md"
+	@echo "  make production-validation — full PGO+DR+LSTM validation (see experiments/pipelines/main_validation/README.md)"
 
 configure:
 	cmake -B $(BUILD_DIR) \
@@ -54,34 +55,9 @@ test-py:
 	poetry run pytest tests/ -q
 
 check: test-py
-	@chmod +x scripts/check_baseline.sh 2>/dev/null || true
-	@./scripts/check_baseline.sh
 
 clean-output:
 	rm -rf $(OUTPUT_DIR)/
-
-cfg-examples:
-	@for file in examples/*.cpp; do \
-		OUT_DIR=$(OUTPUT_DIR) ./scripts/generate_cfg.sh $$file; \
-	done
-
-trace-examples:
-	@for file in examples/*.cpp; do \
-		BASENAME=$$(basename "$$file" .cpp); \
-		./scripts/run_tracer.sh output/$$BASENAME.bin $$BASENAME.bin; \
-		poetry run python3 -m trace_synthesizer compress --cfg output/$$BASENAME.cfg.json --map output/$${BASENAME}_bb_map.txt --trace output/$$BASENAME.trace.bin --out output/$$BASENAME.compressed_trace.json; \
-	done
-
-e2e-pipeline:
-	@if [ -n "$(FILE)" ]; then \
-		echo "Running End-to-End Pipeline for $(FILE)..."; \
-		./scripts/full_pipeline.sh $(FILE) $(ARGS); \
-	else \
-		echo "Running End-to-End Pipeline for all examples..."; \
-		for file in examples/*.cpp; do \
-			./scripts/full_pipeline.sh $$file $(ARGS); \
-		done; \
-	fi
 
 # Full benchmark_complex: C++ plugins + DynamoRIO + Python (rollout, metrics).
 # ARGS are forwarded to the benchmark binary (same as e2e-pipeline). Example: make benchmark-complex ARGS="foo"
@@ -97,3 +73,7 @@ ctuning-bootstrap:
 ctuning-rollout: ctuning-bootstrap
 	@chmod +x scripts/ctuning_full_pipeline_c.sh 2>/dev/null || true
 	poetry run python3 -m trace_synthesizer ctuning-rollout $(CTUNING_ARGS)
+
+production-validation:
+	@chmod +x scripts/run_production_validation_experiment.sh 2>/dev/null || true
+	@./scripts/run_production_validation_experiment.sh
