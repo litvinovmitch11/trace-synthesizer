@@ -1,53 +1,63 @@
-# Воспроизведение (RU)
+# Руководство по воспроизведению
 
-## Требования
+В этом документе описывается, как воспроизвести основные эксперименты, представленные в проекте. Инфраструктура была значительно упрощена, и все ключевые эксперименты теперь управляются через `Makefile`.
 
-- LLVM toolchain (совместимый с проектом, путь по умолчанию в `Makefile`).
-- Python + Poetry.
-- Хотя бы раз выполненный `make configure`.
-- Доступный cBench через `ctuning-bootstrap` (submodule/линк).
+## 1. Подготовка окружения
 
-## Полный прогон end-to-end
+Убедитесь, что у вас установлен LLVM (рекомендуется версия 21) и необходимые Python-зависимости (устанавливаются через Poetry).
 
+```bash
+# Конфигурация системы сборки
+make configure
+
+# Компиляция плагина LLVM CFGDumper и трейсера DynamoRIO
+make build
+```
+
+## 2. Запуск End-to-End Экспериментов
+
+Мы подготовили четыре основных валидационных бенчмарка, демонстрирующих способность фреймворка понимать контекстные зависимости и выполнять обобщение (zero-shot generalization) на мутировавшие Графы Потока Управления (CFG).
+
+Все эти команды автоматически:
+1. Компилируют базовые и мутировавшие C++ программы.
+2. Извлекают CFG и семантические эмбеддинги (IR2Vec).
+3. Собирают истинные трассы (Ground Truth) через DynamoRIO.
+4. Обучают всех агентов синтеза (LSTM, Flat PPO, Hierarchical PPO).
+5. Выполняют zero-shot генерацию (rollouts) на мутировавшем графе.
+6. Вычисляют метрики и рендерят визуализации.
+
+### Эксперимент 1: Контекстная Зависимость (Diamond Problem)
+Демонстрирует способность агента поддерживать внутреннее состояние и временную логику (разрешение паттерна State Machine Trigger).
+```bash
+make exp-diamond
+```
+
+### Эксперимент 2: Базовая Мутация CFG
+Проверяет zero-shot обобщение, когда компиляторные оптимизации вставляют простые структурные блоки-пустышки.
+```bash
+make exp-mutation
+```
+
+### Эксперимент 3: Обобщение Сложных Циклов
+Оценивает фреймворк на алгоритме сортировки, доказывая, что эмбеддинги IR2Vec позволяют агенту обобщать семантику циклов даже при сдвиге ID базовых блоков.
+```bash
+make exp-sorting
+```
+
+### Эксперимент 4: Экстремальные Мутации Компилятора (Loop Peeling)
+Самое сложное испытание. Компилятор радикально изменяет топологическую длину пути до цикла (через отщепление итераций - loop peeling). Демонстрирует, почему Flat PPO с Рекуррентной Памятью (Feature Window) превосходит жесткие Иерархические алгоритмы (HRL).
+```bash
+make exp-smart
+```
+
+## 3. Изучение Артефактов и Метрик
+
+После запуска любого эксперимента сгенерированные артефакты будут находиться в директории `benchmarks/local/<имя_эксперимента>/out/`.
+
+- `metrics_*.json`: Содержит основные оценки, в первую очередь **Hot Path N-Gram Overlap** и KL Divergences.
+- `viz_*.svg`: Визуализации, накладывающие сгенерированные трассы на реальную структуру CFG.
+
+Для очистки всех сгенерированных артефактов и выводов:
 ```bash
 make clean-output
-make build
-make plugins-demo
-make random-baseline
-make dataset-cbench
-make train-lstm
-make lstm-eval
-```
-
-## Ожидаемые артефакты
-
-- Демо плагинов: `output/plugins_demo/*`
-- Метрики бейзлайна: `output/random_baseline/results/metrics_random.json`
-- cBench-датасет: `output/dataset_cbench/dataset/cross.train.jsonl`
-- LSTM-модель: `output/train_lstm/model.pt`
-- Лог обучения LSTM: `output/train_lstm/train.log`
-- Метрики LSTM: `output/lstm_eval/results/metrics_lstm.json`
-- Визуализации:
-  - `output/random_baseline/rollouts_random/viz_random_trace.svg`
-  - `output/lstm_eval/rollouts_lstm/viz_lstm_trace.svg`
-  - `output/lstm_eval/results/viz_real_trace.svg`
-
-## Сравнение двух наборов трасс
-
-```bash
-make compare-traces \
-  REF=output/lstm_eval/reference_real_intra.json \
-  CAND=output/lstm_eval/rollouts_lstm/intra_traces.jsonl \
-  FUNC=main \
-  OUT=output/lstm_eval/results/metrics_pair_lstm_vs_real.json
-```
-
-## Ручная отрисовка CFG + trace overlay
-
-```bash
-make visualize-trace \
-  CFG=output/lstm_eval/benchmark_complex.cfg.json \
-  FUNC=main \
-  TRACE=output/lstm_eval/rollouts_lstm/intra_traces.jsonl \
-  OUT=output/lstm_eval/rollouts_lstm/viz_manual
 ```

@@ -138,7 +138,7 @@ def prefix_features_along_bb_path(
 GLOBAL_CFG_SUMMARY_DIM = 0
 
 
-def global_cfg_summary_vector(grammar: CfgProgram, function_name: str) -> np.ndarray:
+def global_cfg_summary_vector(grammar: CfgProgram, function_name: str, target_dim: int | None = None) -> np.ndarray:
     """Fixed-size summary of the whole function CFG from static ``BlockFeatures`` only."""
     fn = grammar.function(function_name)
     mats = [
@@ -153,9 +153,9 @@ def global_cfg_summary_vector(grammar: CfgProgram, function_name: str) -> np.nda
     mean = np.mean(np.stack(mats, axis=0), axis=0)
     logn = np.array([np.log1p(len(fn.blocks)) / 10.0], dtype=np.float32)
     out = np.concatenate([mean, logn], axis=0)
-    # Keep this dynamic so extending BlockFeatures doesn't break training.
-    if out.shape[0] != (mean.shape[0] + 1):
-        raise ValueError("invalid global CFG summary dim")
+    if target_dim is not None and out.shape[0] < target_dim:
+        pad = np.zeros(target_dim - out.shape[0], dtype=np.float32)
+        out = np.concatenate([out, pad], axis=0)
     return out
 
 
@@ -184,6 +184,9 @@ def successor_features_flat(
                 .numpy()
                 .astype(np.float32)
             )
+            if vec.shape[0] < feat_dim:
+                pad = np.zeros(feat_dim - vec.shape[0], dtype=np.float32)
+                vec = np.concatenate([vec, pad], axis=0)
             parts.append(vec)
         else:
             parts.append(np.zeros(feat_dim, dtype=np.float32))
@@ -221,7 +224,7 @@ def trace_context_tensors_for_bb_path(
             f"Incomplete CFG walk: {len(pairs)} pairs for path len {len(bb_path)}"
         )
     global_vec = (
-        global_cfg_summary_vector(grammar, function_name)
+        global_cfg_summary_vector(grammar, function_name, target_dim=gdim)
         if use_global_summary
         else np.zeros(0, dtype=np.float32)
     )

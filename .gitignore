@@ -1,8 +1,9 @@
 .vscode
-build
+build*
 venv
 .venv
 __pycache__
 output
 analysis/artifacts
 experiments/artifacts
+out

@@ -42,6 +42,12 @@ def _parse_block(raw: dict[str, Any]) -> BasicBlock:
         has_indirect_branch=bool(raw.get("has_indirect_branch", False)),
         loop_depth=int(raw.get("loop_depth", 0)),
         dom_tree_depth=int(raw.get("dom_tree_depth", 0)),
+        pred_count=int(raw.get("pred_count", 0)),
+        post_dom_tree_depth=int(raw.get("post_dom_tree_depth", 0)),
+        is_loop_header=bool(raw.get("is_loop_header", False)),
+        is_loop_latch=bool(raw.get("is_loop_latch", False)),
+        is_loop_exiting=bool(raw.get("is_loop_exiting", False)),
+        back_edge_in_count=int(raw.get("back_edge_in_count", 0)),
         terminator_kind=str(raw.get("terminator_kind", "none")),
         ir2vec_embedding=tuple(float(x) for x in raw.get("ir2vec_embedding", []))
         if raw.get("ir2vec_embedding") is not None

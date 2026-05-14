@@ -35,6 +35,12 @@ class BasicBlock:
     has_indirect_branch: bool = False
     loop_depth: int = 0
     dom_tree_depth: int = 0
+    pred_count: int = 0
+    post_dom_tree_depth: int = 0
+    is_loop_header: bool = False
+    is_loop_latch: bool = False
+    is_loop_exiting: bool = False
+    back_edge_in_count: int = 0
     terminator_kind: str = "none"
     ir2vec_embedding: Optional[tuple[float, ...]] = None
     successors: tuple[SuccessorEdge, ...] = field(default_factory=tuple)

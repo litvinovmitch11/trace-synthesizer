@@ -34,25 +34,36 @@ def pairs_to_events(pairs: list[tuple[str, int]]) -> list[dict[str, str | int]]:
 
 
 def intra_sequence_from_compressed(
-    compressed: list[dict[str, str | int]], function_name: str
+    compressed: list[dict[str, str | int]],
+    function_name: str,
+    *,
+    dedupe_consecutive: bool = True,
 ) -> list[dict[str, str | int]]:
-    """Filter global compressed trace to one function, then dedupe consecutive BBs."""
+    """Filter global compressed trace to one function; optionally dedupe consecutive BBs."""
     raw = [
         (str(e["func"]), int(e["bb"]))
         for e in compressed
         if str(e["func"]) == function_name
     ]
-    return pairs_to_events(dedupe_consecutive_func_bb(raw))
+    if dedupe_consecutive:
+        raw = dedupe_consecutive_func_bb(raw)
+    return pairs_to_events(raw)
 
 
 def intra_sequence_from_bb_path(
-    function_name: str, entry_bb_id: int, step_to_bbs: Sequence[int]
+    function_name: str,
+    entry_bb_id: int,
+    step_to_bbs: Sequence[int],
+    *,
+    dedupe_consecutive: bool = True,
 ) -> list[dict[str, str | int]]:
-    """BB visit order: entry block then each step's destination (same dedupe as compress)."""
+    """BB visit order: entry block then each step's destination (optional dedupe like compress)."""
     raw = [(function_name, entry_bb_id)] + [
         (function_name, int(b)) for b in step_to_bbs
     ]
-    return pairs_to_events(dedupe_consecutive_func_bb(raw))
+    if dedupe_consecutive:
+        raw = dedupe_consecutive_func_bb(raw)
+    return pairs_to_events(raw)
 
 
 def canonical_intra_trace_record(

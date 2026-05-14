@@ -35,6 +35,13 @@ class BlockFeatures:
     has_indirect_branch: float
     loop_depth: float
     dom_tree_depth: float
+    is_entry: float
+    pred_count: float
+    post_dom_tree_depth: float
+    is_loop_header: float
+    is_loop_latch: float
+    is_loop_exiting: float
+    back_edge_in_count: float
     terminator_conditional: float
     terminator_unconditional: float
     terminator_return: float
@@ -64,6 +71,13 @@ class BlockFeatures:
             has_indirect_branch=1.0 if block.has_indirect_branch else 0.0,
             loop_depth=float(block.loop_depth),
             dom_tree_depth=float(block.dom_tree_depth),
+            is_entry=1.0 if block.is_entry else 0.0,
+            pred_count=float(block.pred_count),
+            post_dom_tree_depth=float(block.post_dom_tree_depth),
+            is_loop_header=1.0 if block.is_loop_header else 0.0,
+            is_loop_latch=1.0 if block.is_loop_latch else 0.0,
+            is_loop_exiting=1.0 if block.is_loop_exiting else 0.0,
+            back_edge_in_count=float(block.back_edge_in_count),
             terminator_conditional=1.0
             if block.terminator_kind == "conditional_branch"
             else 0.0,
@@ -106,6 +120,13 @@ class BlockFeatures:
             self.has_indirect_branch,
             self.loop_depth,
             self.dom_tree_depth,
+            self.is_entry,
+            self.pred_count,
+            self.post_dom_tree_depth,
+            self.is_loop_header,
+            self.is_loop_latch,
+            self.is_loop_exiting,
+            self.back_edge_in_count,
             self.terminator_conditional,
             self.terminator_unconditional,
             self.terminator_return,
@@ -120,4 +141,5 @@ class BlockFeatures:
 
     @property
     def base_dim(self) -> int:
-        return 20
+        """Scalar fields in ``as_tensor`` before optional IR2Vec tail."""
+        return 27

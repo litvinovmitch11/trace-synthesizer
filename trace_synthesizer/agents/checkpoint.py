@@ -10,11 +10,13 @@ import torch
 import torch.nn as nn
 
 from trace_synthesizer.agents.feature_window_lstm_policy import FeatureWindowLstmPolicy
-from trace_synthesizer.agents.torch_policy_stub import MaskedLstmPolicyStub
+from trace_synthesizer.agents.ppo_policies import FlatActorCritic, HierarchicalActorCritic
 
 CHECKPOINT_SCHEMA_VERSION = 1
 POLICY_TYPE_MASKED_LSTM = "masked_lstm"
 POLICY_TYPE_FEATURE_WINDOW_LSTM = "feature_window_lstm"
+POLICY_TYPE_PPO_FLAT = "ppo_flat_actor_critic"
+POLICY_TYPE_PPO_HIERARCHICAL = "ppo_hier_actor_critic"
 
 
 def save_policy_checkpoint(stem: Path, policy: nn.Module, meta: dict[str, Any]) -> None:
@@ -62,7 +64,12 @@ def load_policy_checkpoint(
             f"expected {CHECKPOINT_SCHEMA_VERSION}"
         )
     ptype = meta.get("policy_type")
-    if ptype not in (POLICY_TYPE_MASKED_LSTM, POLICY_TYPE_FEATURE_WINDOW_LSTM):
+    if ptype not in (
+        POLICY_TYPE_MASKED_LSTM,
+        POLICY_TYPE_FEATURE_WINDOW_LSTM,
+        POLICY_TYPE_PPO_FLAT,
+        POLICY_TYPE_PPO_HIERARCHICAL,
+    ):
         raise ValueError(f"Unsupported policy_type {ptype!r}")
     policy = build_policy_from_meta(meta)
     state = torch.load(pt_path, map_location=device, weights_only=True)
@@ -73,8 +80,6 @@ def load_policy_checkpoint(
 
 def build_policy_from_meta(meta: dict[str, Any]) -> nn.Module:
     ptype = meta.get("policy_type")
-    if ptype == POLICY_TYPE_MASKED_LSTM:
-        return build_masked_lstm_from_meta(meta)
     if ptype == POLICY_TYPE_FEATURE_WINDOW_LSTM:
         wb = int(meta.get("window_back", meta.get("window", 8)))
         succ = int(meta.get("succ_feat_slots", 0))
@@ -87,40 +92,24 @@ def build_policy_from_meta(meta: dict[str, Any]) -> nn.Module:
             global_summary_dim=gdim,
             lstm_hidden=int(meta.get("lstm_hidden", 64)),
         )
+    if ptype == POLICY_TYPE_PPO_FLAT:
+        return FlatActorCritic(
+            feat_dim=int(meta["feat_dim"]),
+            max_actions=int(meta["max_actions"]),
+            hidden=int(meta.get("hidden", 128)),
+            use_aux_exit=bool(meta.get("use_aux_exit", False)),
+        )
+    if ptype == POLICY_TYPE_PPO_HIERARCHICAL:
+        return HierarchicalActorCritic(
+            feat_dim=int(meta["feat_dim"]),
+            max_actions=int(meta["max_actions"]),
+            num_modes=int(meta.get("num_modes", 4)),
+            z_embed_dim=int(meta.get("z_embed_dim", 8)),
+            manager_every=int(meta.get("manager_every", 4)),
+            hidden=int(meta.get("hidden", 128)),
+            use_aux_exit=bool(meta.get("use_aux_exit", False)),
+        )
     raise ValueError(f"Unsupported policy_type {ptype!r}")
-
-
-def build_masked_lstm_from_meta(meta: dict[str, Any]) -> MaskedLstmPolicyStub:
-    return MaskedLstmPolicyStub(
-        num_blocks=int(meta["num_blocks"]),
-        max_actions=int(meta["max_actions"]),
-        embed_dim=int(meta.get("embed_dim", 32)),
-        lstm_hidden=int(meta.get("lstm_hidden", 64)),
-        extra_feat_dim=int(meta.get("extra_feat_dim", 0)),
-    )
-
-
-def masked_lstm_meta_for_save(
-    *,
-    num_blocks: int,
-    max_actions: int,
-    embed_dim: int,
-    lstm_hidden: int,
-    extra_feat_dim: int,
-    function_name: str | None = None,
-) -> dict[str, Any]:
-    """Hyperparameters dict merged into JSON on save (caller may extend)."""
-    out: dict[str, Any] = {
-        "policy_type": POLICY_TYPE_MASKED_LSTM,
-        "num_blocks": num_blocks,
-        "max_actions": max_actions,
-        "embed_dim": embed_dim,
-        "lstm_hidden": lstm_hidden,
-        "extra_feat_dim": extra_feat_dim,
-    }
-    if function_name is not None:
-        out["function_name"] = function_name
-    return out
 
 
 def feature_window_lstm_meta_for_save(
@@ -143,6 +132,52 @@ def feature_window_lstm_meta_for_save(
         "succ_feat_slots": int(succ_feat_slots),
         "global_summary_dim": int(global_summary_dim),
         "lstm_hidden": int(lstm_hidden),
+    }
+    if function_name is not None:
+        out["function_name"] = function_name
+    return out
+
+
+def ppo_flat_meta_for_save(
+    *,
+    feat_dim: int,
+    max_actions: int,
+    hidden: int = 128,
+    function_name: str | None = None,
+    use_aux_exit: bool = False,
+) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "policy_type": POLICY_TYPE_PPO_FLAT,
+        "feat_dim": int(feat_dim),
+        "max_actions": int(max_actions),
+        "hidden": int(hidden),
+        "use_aux_exit": bool(use_aux_exit),
+    }
+    if function_name is not None:
+        out["function_name"] = function_name
+    return out
+
+
+def ppo_hier_meta_for_save(
+    *,
+    feat_dim: int,
+    max_actions: int,
+    num_modes: int,
+    z_embed_dim: int,
+    manager_every: int,
+    hidden: int = 128,
+    function_name: str | None = None,
+    use_aux_exit: bool = False,
+) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "policy_type": POLICY_TYPE_PPO_HIERARCHICAL,
+        "feat_dim": int(feat_dim),
+        "max_actions": int(max_actions),
+        "num_modes": int(num_modes),
+        "z_embed_dim": int(z_embed_dim),
+        "manager_every": int(manager_every),
+        "hidden": int(hidden),
+        "use_aux_exit": bool(use_aux_exit),
     }
     if function_name is not None:
         out["function_name"] = function_name

@@ -4,6 +4,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/GlobalValue.h"
@@ -137,6 +138,8 @@ public:
     initializeMachineLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
     initializeMachineDominatorTreeWrapperPassPass(
         *PassRegistry::getPassRegistry());
+    initializeMachinePostDominatorTreeWrapperPassPass(
+        *PassRegistry::getPassRegistry());
   }
 
   StringRef getPassName() const override { return "CFG JSON Dumper Pass"; }
@@ -146,6 +149,7 @@ public:
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -157,6 +161,8 @@ public:
         getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
     auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
     auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+    auto &MPDT =
+        getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
 
     json::Object FuncJson;
     FuncJson["function_name"] = MF.getName();
@@ -191,6 +197,29 @@ public:
       } else {
         BlockObj["dom_tree_depth"] = static_cast<int64_t>(0);
       }
+
+      BlockObj["pred_count"] = static_cast<int64_t>(MBB.pred_size());
+      if (MachineDomTreeNode *PN = MPDT.getNode(&MBB)) {
+        BlockObj["post_dom_tree_depth"] = static_cast<int64_t>(PN->getLevel());
+      } else {
+        BlockObj["post_dom_tree_depth"] = static_cast<int64_t>(0);
+      }
+
+      BlockObj["is_loop_header"] = MLI.isLoopHeader(&MBB);
+      const MachineLoop *InnerL = MLI.getLoopFor(&MBB);
+      BlockObj["is_loop_latch"] =
+          InnerL && InnerL->getLoopLatch() == &MBB;
+      BlockObj["is_loop_exiting"] =
+          InnerL && InnerL->isLoopExiting(&MBB);
+
+      int64_t BackEdgeIn = 0;
+      if (MLI.isLoopHeader(&MBB)) {
+        for (MachineBasicBlock *Pred : MBB.predecessors()) {
+          if (MDT.dominates(&MBB, Pred))
+            ++BackEdgeIn;
+        }
+      }
+      BlockObj["back_edge_in_count"] = BackEdgeIn;
 
       if (auto CallTarget = getCallTarget(MBB)) {
         BlockObj["has_call"] = true;

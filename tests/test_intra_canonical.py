@@ -8,6 +8,7 @@ from trace_synthesizer.io.intra_trace import (
     SCHEMA_VERSION,
     canonical_intra_trace_record,
     export_intra_trace_from_compressed_file,
+    intra_sequence_from_bb_path,
 )
 
 
@@ -47,3 +48,12 @@ def test_export_intra_matches_rollout_line_schema(tmp_path: Path) -> None:
 
     assert set(roll.keys()) == set(ref.keys())
     assert roll["source"] == ref["source"] == "bb_trace"
+
+
+def test_intra_sequence_from_bb_path_preserves_repeats_when_requested() -> None:
+    seq = intra_sequence_from_bb_path(
+        "f", 0, [1, 1, 1, 2], dedupe_consecutive=False
+    )
+    assert [e["bb"] for e in seq] == [0, 1, 1, 1, 2]
+    seq_d = intra_sequence_from_bb_path("f", 0, [1, 1, 1, 2], dedupe_consecutive=True)
+    assert [e["bb"] for e in seq_d] == [0, 1, 2]

@@ -25,11 +25,22 @@ class RandomPGOAgent:
         self._by_id = grammar.function(function_name).block_by_id()
 
     def act(self, observation: dict[str, Any], info: dict[str, Any]) -> int:
+        fn = str(info.get("from_function", self._fn))
         bb_id = int(observation["bb_id"][0])
         mask = np.asarray(info["action_mask"], dtype=bool)
-        block = self._by_id[bb_id]
-        w = normalized_successor_weights(block)
+        block = self._grammar.function(fn).block_by_id()[bb_id]
+        
+        # Always take CALL if available (greedy interprocedural)
         n = int(mask.shape[0])
+        if n >= 2:
+            idx_call = n - 2
+            idx_return = n - 1
+            if mask[idx_call]:
+                return idx_call
+            if mask[idx_return]:
+                return idx_return
+
+        w = normalized_successor_weights(block)
         p = np.zeros(n, dtype=np.float64)
         for i in range(min(len(w), n)):
             if mask[i]:

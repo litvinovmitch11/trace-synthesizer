@@ -43,12 +43,17 @@ def write_intra_traces_jsonl(
     path: str | Path,
     episodes: list[EpisodeRollout],
     function_name: str,
+    *,
+    dedupe_intra: bool = True,
 ) -> None:
-    """One JSON object per line: same `sequence` layout as compressed_trace.json."""
+    """One JSON object per line: same `sequence` layout as compressed_trace.json when deduping."""
     lines = []
     for ep in episodes:
         seq = intra_sequence_from_bb_path(
-            function_name, ep.entry_bb_id, [s.to_bb for s in ep.steps]
+            function_name,
+            ep.entry_bb_id,
+            [s.to_bb for s in ep.steps],
+            dedupe_consecutive=dedupe_intra,
         )
         lines.append(
             json.dumps(

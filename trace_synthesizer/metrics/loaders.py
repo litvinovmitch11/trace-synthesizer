@@ -41,8 +41,15 @@ def load_paths_from_intra_traces_jsonl(path: str | Path) -> list[TracePath]:
     return out
 
 
-def load_path_from_compressed_trace(path: str | Path, function_name: str) -> TracePath:
-    """Filter one function from global compressed trace and dedupe like compress."""
+def load_path_from_compressed_trace(
+    path: str | Path,
+    function_name: str,
+    *,
+    dedupe_consecutive: bool = True,
+) -> TracePath:
+    """Filter one function from global compressed trace; dedupe matches compress by default."""
     compressed = load_compressed_trace_json(path)
-    seq = intra_sequence_from_compressed(compressed, function_name)
+    seq = intra_sequence_from_compressed(
+        compressed, function_name, dedupe_consecutive=dedupe_consecutive
+    )
     return _events_to_path(seq)

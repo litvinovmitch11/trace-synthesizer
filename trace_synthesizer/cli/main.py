@@ -107,15 +107,27 @@ def cmd_metrics_compare(args: argparse.Namespace) -> int:
 
     func = args.func
 
+    dedupe_compressed = not bool(
+        getattr(args, "metrics_preserve_consecutive_bb", False)
+    )
+
     def load_ref() -> list:
         if args.reference_compressed:
-            return [load_path_from_compressed_trace(args.reference, func)]
+            return [
+                load_path_from_compressed_trace(
+                    args.reference, func, dedupe_consecutive=dedupe_compressed
+                )
+            ]
         return [load_path_from_intra_trace_json(args.reference)]
 
     def load_cand() -> list:
         p = Path(args.candidate)
         if args.candidate_compressed:
-            return [load_path_from_compressed_trace(args.candidate, func)]
+            return [
+                load_path_from_compressed_trace(
+                    args.candidate, func, dedupe_consecutive=dedupe_compressed
+                )
+            ]
         if p.suffix.lower() == ".jsonl":
             return load_paths_from_intra_traces_jsonl(p)
         return [load_path_from_intra_trace_json(p)]
@@ -173,7 +185,7 @@ def cmd_metrics_bench_speed(args: argparse.Namespace) -> int:
 
 def cmd_rollout_random(args: argparse.Namespace) -> int:
     from trace_synthesizer.agents.random_pgo import RandomPGOAgent
-    from trace_synthesizer.env.cfg_walk_env import CFGWalkEnv
+    from trace_synthesizer.env.interproc_walk_env import InterproceduralCFGWalkEnv
     from trace_synthesizer.io.intra_trace import (
         dump_canonical_intra_json,
         intra_sequence_from_bb_path,
@@ -187,11 +199,14 @@ def cmd_rollout_random(args: argparse.Namespace) -> int:
     )
 
     grammar = CfgProgram.from_cfg_json(args.cfg)
-    env = CFGWalkEnv(
+    env = InterproceduralCFGWalkEnv(
         grammar,
         args.func,
         max_steps=args.max_steps,
         seed=args.seed,
+    )
+    full_intra = bool(getattr(args, "full_intra_trace", False)) or not bool(
+        getattr(args, "dedupe_intra_trace", False)
     )
     episodes = []
     rng_seed = args.seed
@@ -203,13 +218,21 @@ def cmd_rollout_random(args: argparse.Namespace) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     summary = summarize_rollouts(episodes)
     write_episodes_jsonl(out_dir / "runs.jsonl", episodes, seed=args.seed or 0)
-    write_intra_traces_jsonl(out_dir / "intra_traces.jsonl", episodes, args.func)
+    write_intra_traces_jsonl(
+        out_dir / "intra_traces.jsonl",
+        episodes,
+        args.func,
+        dedupe_intra=not full_intra,
+    )
     write_summary_json(out_dir / "summary.json", summary)
     wpath = getattr(args, "write_canonical_intra", None)
     if wpath and episodes:
         ep0 = episodes[0]
         seq = intra_sequence_from_bb_path(
-            args.func, ep0.entry_bb_id, [s.to_bb for s in ep0.steps]
+            args.func,
+            ep0.entry_bb_id,
+            [s.to_bb for s in ep0.steps],
+            dedupe_consecutive=not full_intra,
         )
         dump_canonical_intra_json(
             wpath, function_name=args.func, sequence=seq, episode=None
@@ -229,7 +252,7 @@ def cmd_rollout_lstm(args: argparse.Namespace) -> int:
     from trace_synthesizer.agents.feature_window_lstm_agent import (
         FeatureWindowLSTMCfgAgent,
     )
-    from trace_synthesizer.env.cfg_walk_env import CFGWalkEnv
+    from trace_synthesizer.env.interproc_walk_env import InterproceduralCFGWalkEnv
     from trace_synthesizer.io.intra_trace import (
         dump_canonical_intra_json,
         intra_sequence_from_bb_path,
@@ -244,7 +267,7 @@ def cmd_rollout_lstm(args: argparse.Namespace) -> int:
 
     device = torch.device(args.device)
     grammar = CfgProgram.from_cfg_json(args.cfg)
-    env = CFGWalkEnv(
+    env = InterproceduralCFGWalkEnv(
         grammar,
         args.func,
         max_steps=args.max_steps,
@@ -277,23 +300,441 @@ def cmd_rollout_lstm(args: argparse.Namespace) -> int:
         if policy is None:
             policy = agent.policy
         episodes.append(rollout_episode(env, agent, reset_seed=rs))
+    full_intra = bool(getattr(args, "full_intra_trace", False)) or not bool(
+        getattr(args, "dedupe_intra_trace", False)
+    )
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     summary = summarize_rollouts(episodes)
     write_episodes_jsonl(out_dir / "runs.jsonl", episodes, seed=args.seed or 0)
-    write_intra_traces_jsonl(out_dir / "intra_traces.jsonl", episodes, args.func)
+    write_intra_traces_jsonl(
+        out_dir / "intra_traces.jsonl",
+        episodes,
+        args.func,
+        dedupe_intra=not full_intra,
+    )
     write_summary_json(out_dir / "summary.json", summary)
     wpath = getattr(args, "write_canonical_intra", None)
     if wpath and episodes:
         ep0 = episodes[0]
         seq = intra_sequence_from_bb_path(
-            args.func, ep0.entry_bb_id, [s.to_bb for s in ep0.steps]
+            args.func,
+            ep0.entry_bb_id,
+            [s.to_bb for s in ep0.steps],
+            dedupe_consecutive=not full_intra,
         )
         dump_canonical_intra_json(
             wpath, function_name=args.func, sequence=seq, episode=None
         )
         print(f"Wrote canonical intra (episode 0): {wpath}", flush=True)
     print(summary.to_dict())
+    return 0
+
+
+def cmd_rollout_hrl(args: argparse.Namespace) -> int:
+    import torch
+
+    from trace_synthesizer.agents.hrl_ppo_agent import HRLPPOCfgAgent
+    from trace_synthesizer.env.cfg_reward_wrapper import CFGWalkRewardWrapper
+    from trace_synthesizer.env.interproc_walk_env import InterproceduralCFGWalkEnv
+    from trace_synthesizer.io.intra_trace import (
+        dump_canonical_intra_json,
+        intra_sequence_from_bb_path,
+    )
+    from trace_synthesizer.runner.rollout import rollout_episode
+    from trace_synthesizer.runner.stats import summarize_rollouts
+    from trace_synthesizer.runner.writers import (
+        write_episodes_jsonl,
+        write_intra_traces_jsonl,
+        write_summary_json,
+    )
+
+    grammar = CfgProgram.from_cfg_json(args.cfg)
+    if getattr(args, "cpu_threads", None):
+        torch.set_num_threads(int(args.cpu_threads))
+    action_select = args.action_select
+    temperature = float(args.temperature)
+    top_p = float(args.top_p)
+    if args.preset == "fast":
+        action_select = "argmax"
+        temperature = 1.0
+        top_p = 1.0
+    elif args.preset == "quality":
+        action_select = "sample"
+        # Keep quality preset genuinely stochastic to avoid greedy loop collapse.
+        temperature = max(1.1, temperature)
+        top_p = max(0.98, top_p)
+    base_env = InterproceduralCFGWalkEnv(
+        grammar,
+        args.func,
+        max_steps=args.max_steps,
+        seed=args.seed,
+    )
+    loop_profile: dict | None = None
+    if getattr(args, "loop_profile", None) is not None:
+        from trace_synthesizer.rl.loop_profile import load_loop_profile
+
+        loop_profile = load_loop_profile(Path(args.loop_profile))
+    else:
+        meta_path = Path(args.checkpoint).expanduser().resolve().with_suffix(".json")
+        if meta_path.is_file():
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            lp = meta.get("loop_profile")
+            if lp:
+                lp_path = Path(str(lp)).expanduser().resolve()
+                if lp_path.is_file():
+                    from trace_synthesizer.rl.loop_profile import load_loop_profile
+
+                    loop_profile = load_loop_profile(lp_path)
+    env = CFGWalkRewardWrapper(base_env, grammar, args.func, loop_profile=loop_profile)
+    
+    window_back = int(getattr(args, "window_back", 1))
+    from trace_synthesizer.env.feature_window_wrapper import FeatureWindowWrapper
+    env = FeatureWindowWrapper(env, window_back=window_back)
+
+    episodes = []
+    rng_seed = args.seed
+    batch_n = max(1, int(getattr(args, "batch_episodes", 1)))
+    for start in range(0, int(args.episodes), batch_n):
+        end = min(int(args.episodes), start + batch_n)
+        for ep in range(start, end):
+            rs = (rng_seed + ep) if rng_seed is not None else None
+            agent = HRLPPOCfgAgent(
+                checkpoint_stem=args.checkpoint,
+                device=args.device,
+                action_select=action_select,
+                sample_temperature=temperature,
+                top_p=top_p,
+                seed=rs,
+            )
+            episodes.append(rollout_episode(env, agent, reset_seed=rs))
+    full_intra = bool(getattr(args, "full_intra_trace", False)) or not bool(
+        getattr(args, "dedupe_intra_trace", False)
+    )
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    summary = summarize_rollouts(episodes)
+    write_episodes_jsonl(out_dir / "runs.jsonl", episodes, seed=args.seed or 0)
+    write_intra_traces_jsonl(
+        out_dir / "intra_traces.jsonl",
+        episodes,
+        args.func,
+        dedupe_intra=not full_intra,
+    )
+    write_summary_json(out_dir / "summary.json", summary)
+    wpath = getattr(args, "write_canonical_intra", None)
+    if wpath and episodes:
+        ep0 = episodes[0]
+        seq = intra_sequence_from_bb_path(
+            args.func,
+            ep0.entry_bb_id,
+            [s.to_bb for s in ep0.steps],
+            dedupe_consecutive=not full_intra,
+        )
+        dump_canonical_intra_json(
+            wpath, function_name=args.func, sequence=seq, episode=None
+        )
+        print(f"Wrote canonical intra (episode 0): {wpath}", flush=True)
+    print(summary.to_dict())
+    return 0
+
+
+def cmd_train_hrl_ppo(args: argparse.Namespace) -> int:
+    from trace_synthesizer.rl.train_ppo import run_train_ppo
+
+    report = run_train_ppo(args)
+    print(json.dumps(report))
+    return 0
+
+
+def cmd_train_hrl_ppo_corpus(args: argparse.Namespace) -> int:
+    root = Path(__file__).resolve().parents[2]
+    cmd = [
+        sys.executable,
+        str(root / "scripts" / "train_hrl_ppo_corpus.py"),
+        "--corpus-index",
+        str(args.corpus_index),
+        "--out-stem",
+        str(args.out_stem),
+        "--device",
+        str(args.device),
+        "--seed",
+        str(args.seed),
+        "--rounds",
+        str(args.rounds),
+        "--tasks-per-round",
+        str(args.tasks_per_round),
+        "--sampler",
+        str(args.sampler),
+        "--default-max-steps",
+        str(args.default_max_steps),
+        "--per-task-iterations",
+        str(args.per_task_iterations),
+        "--per-task-steps-per-iter",
+        str(args.per_task_steps_per_iter),
+        "--epochs",
+        str(args.epochs),
+        "--minibatch-size",
+        str(args.minibatch_size),
+        "--lr",
+        str(args.lr),
+        "--gamma",
+        str(args.gamma),
+        "--gae-lambda",
+        str(args.gae_lambda),
+        "--clip-coef",
+        str(args.clip_coef),
+        "--vf-coef",
+        str(args.vf_coef),
+        "--ent-coef",
+        str(args.ent_coef),
+        "--max-grad-norm",
+        str(args.max_grad_norm),
+        "--hidden",
+        str(args.hidden),
+        "--num-modes",
+        str(args.num_modes),
+        "--z-embed-dim",
+        str(args.z_embed_dim),
+        "--manager-every",
+        str(args.manager_every),
+        "--pgo-log-scale",
+        str(args.pgo_log_scale),
+        "--invalid-action-penalty",
+        str(args.invalid_action_penalty),
+        "--terminal-kl-scale",
+        str(args.terminal_kl_scale),
+        "--repeat-bb-penalty-scale",
+        str(args.repeat_bb_penalty_scale),
+        "--truncation-penalty",
+        str(args.truncation_penalty),
+        "--loop-timing-scale",
+        str(args.loop_timing_scale),
+        "--ref-edge-log-scale",
+        str(getattr(args, "ref_edge_log_scale", 0.0)),
+        "--short-path-penalty-scale",
+        str(getattr(args, "short_path_penalty_scale", 0.0)),
+        "--aux-exit-head",
+        str(args.aux_exit_head),
+        "--aux-exit-coef",
+        str(args.aux_exit_coef),
+        "--bc-epochs",
+        str(args.bc_epochs),
+        "--bc-batch-size",
+        str(args.bc_batch_size),
+        "--bc-aux-coef",
+        str(args.bc_aux_coef),
+    ]
+    if getattr(args, "no_loop_proposal_defaults", False):
+        cmd.append("--no-loop-proposal-defaults")
+    if args.enforce_shared_max_actions:
+        cmd.append("--enforce-shared-max-actions")
+    if args.hierarchical:
+        cmd.append("--hierarchical")
+    if args.tb_logdir is not None:
+        cmd.extend(["--tb-logdir", str(args.tb_logdir)])
+    if getattr(args, "no_tensorboard", False):
+        cmd.append("--no-tensorboard")
+    if getattr(args, "corpus_snapshots", False):
+        cmd.append("--corpus-snapshots")
+    if getattr(args, "verbose", False):
+        cmd.append("--verbose")
+    if args.train_report is not None:
+        cmd.extend(["--train-report", str(args.train_report)])
+    # Stream child stdout/stderr (capture_output buffers everything until the child exits).
+    env = os.environ | {"PYTHONUNBUFFERED": "1"}
+    cp = subprocess.run(cmd, env=env)
+    return int(cp.returncode)
+
+
+def cmd_adapt_hrl_ppo_graph(args: argparse.Namespace) -> int:
+    root = Path(__file__).resolve().parents[2]
+    cmd = [
+        sys.executable,
+        str(root / "scripts" / "adapt_hrl_ppo_graph.py"),
+        "--cfg",
+        str(args.cfg),
+        "--func",
+        str(args.func),
+        "--reference",
+        str(args.reference),
+        "--foundation-checkpoint",
+        str(args.foundation_checkpoint),
+        "--out-stem",
+        str(args.out_stem),
+        "--freeze-mode",
+        str(args.freeze_mode),
+        "--device",
+        str(args.device),
+        "--seed",
+        str(args.seed),
+        "--max-steps",
+        str(args.max_steps),
+        "--adapt-iterations",
+        str(args.adapt_iterations),
+        "--adapt-steps-per-iter",
+        str(args.adapt_steps_per_iter),
+        "--epochs",
+        str(args.epochs),
+        "--minibatch-size",
+        str(args.minibatch_size),
+        "--lr",
+        str(args.lr),
+        "--gamma",
+        str(args.gamma),
+        "--gae-lambda",
+        str(args.gae_lambda),
+        "--clip-coef",
+        str(args.clip_coef),
+        "--vf-coef",
+        str(args.vf_coef),
+        "--ent-coef",
+        str(args.ent_coef),
+        "--max-grad-norm",
+        str(args.max_grad_norm),
+        "--hidden",
+        str(args.hidden),
+        "--num-modes",
+        str(args.num_modes),
+        "--z-embed-dim",
+        str(args.z_embed_dim),
+        "--manager-every",
+        str(args.manager_every),
+        "--pgo-log-scale",
+        str(args.pgo_log_scale),
+        "--invalid-action-penalty",
+        str(args.invalid_action_penalty),
+        "--terminal-kl-scale",
+        str(args.terminal_kl_scale),
+        "--repeat-bb-penalty-scale",
+        str(args.repeat_bb_penalty_scale),
+        "--truncation-penalty",
+        str(args.truncation_penalty),
+        "--loop-timing-scale",
+        str(args.loop_timing_scale),
+        "--ref-edge-log-scale",
+        str(getattr(args, "ref_edge_log_scale", 0.0)),
+        "--short-path-penalty-scale",
+        str(getattr(args, "short_path_penalty_scale", 0.0)),
+        "--aux-exit-head",
+        str(args.aux_exit_head),
+        "--aux-exit-coef",
+        str(args.aux_exit_coef),
+        "--bc-epochs",
+        str(args.bc_epochs),
+        "--bc-batch-size",
+        str(args.bc_batch_size),
+        "--bc-aux-coef",
+        str(args.bc_aux_coef),
+        "--tb-run-name",
+        str(args.tb_run_name),
+    ]
+    if getattr(args, "no_loop_proposal_defaults", False):
+        cmd.append("--no-loop-proposal-defaults")
+    if getattr(args, "loop_profile", None) is not None:
+        cmd.extend(["--loop-profile", str(args.loop_profile)])
+    if args.reference_compressed:
+        cmd.append("--reference-compressed")
+    if args.hierarchical:
+        cmd.append("--hierarchical")
+    if args.tb_logdir is not None:
+        cmd.extend(["--tb-logdir", str(args.tb_logdir)])
+    if args.train_report is not None:
+        cmd.extend(["--train-report", str(args.train_report)])
+    env = os.environ | {"PYTHONUNBUFFERED": "1"}
+    cp = subprocess.run(cmd, env=env)
+    return int(cp.returncode)
+
+
+def cmd_compute_loop_profile(args: argparse.Namespace) -> int:
+    root = Path(__file__).resolve().parents[2]
+    cmd = [
+        sys.executable,
+        str(root / "scripts" / "compute_loop_profile.py"),
+        "--cfg",
+        str(args.cfg),
+        "--func",
+        str(args.func),
+        "--out",
+        str(args.out),
+    ]
+    for r in args.reference:
+        cmd.extend(["--reference", str(r)])
+    if args.reference_compressed:
+        cmd.append("--reference-compressed")
+    cp = subprocess.run(cmd, capture_output=True, text=True)
+    if cp.stdout:
+        print(cp.stdout, end="")
+    if cp.returncode != 0:
+        if cp.stderr:
+            print(cp.stderr, file=sys.stderr, end="")
+        return int(cp.returncode)
+    return 0
+
+
+def cmd_build_rl_corpus_index(args: argparse.Namespace) -> int:
+    root = Path(__file__).resolve().parents[2]
+    cmd = [
+        sys.executable,
+        str(root / "scripts" / "build_rl_corpus_index.py"),
+        "--input-jsonl",
+        str(args.input_jsonl),
+        "--out",
+        str(args.out),
+        "--default-max-steps",
+        str(args.default_max_steps),
+        "--default-weight",
+        str(args.default_weight),
+        "--max-refs-per-task",
+        str(args.max_refs_per_task),
+        "--id-key",
+        str(args.id_key),
+    ]
+    if getattr(args, "loop_profile_dir", None) is not None:
+        cmd.extend(["--loop-profile-dir", str(args.loop_profile_dir)])
+    cp = subprocess.run(cmd, capture_output=True, text=True)
+    if cp.stdout:
+        print(cp.stdout, end="")
+    if cp.returncode != 0:
+        if cp.stderr:
+            print(cp.stderr, file=sys.stderr, end="")
+        return int(cp.returncode)
+    return 0
+
+
+def cmd_evaluate_two_factor_gates(args: argparse.Namespace) -> int:
+    root = Path(__file__).resolve().parents[2]
+    cmd = [
+        sys.executable,
+        str(root / "scripts" / "evaluate_two_factor_gates.py"),
+        "--spec",
+        str(args.spec),
+        "--out",
+        str(args.out),
+        "--gate-block-kl",
+        str(args.gate_block_kl),
+        "--gate-edge-kl",
+        str(args.gate_edge_kl),
+        "--gate-hotpath",
+        str(args.gate_hotpath),
+        "--gate-speedup",
+        str(args.gate_speedup),
+        "--epsilon",
+        str(args.epsilon),
+        "--ngram-min",
+        str(args.ngram_min),
+        "--ngram-max",
+        str(args.ngram_max),
+        "--top-k",
+        str(args.top_k),
+    ]
+    cp = subprocess.run(cmd, capture_output=True, text=True)
+    if cp.stdout:
+        print(cp.stdout, end="")
+    if cp.returncode != 0:
+        if cp.stderr:
+            print(cp.stderr, file=sys.stderr, end="")
+        return int(cp.returncode)
     return 0
 
 
@@ -375,6 +816,11 @@ def build_parser() -> argparse.ArgumentParser:
     m.add_argument("--ngram-max", type=int, default=4)
     m.add_argument("--top-k", type=int, default=64)
     m.add_argument("--out", default=None, help="Write JSON report to this path")
+    m.add_argument(
+        "--metrics-preserve-consecutive-bb",
+        action="store_true",
+        help="When loading compressed traces, keep consecutive same-BB events (edge / length metrics)",
+    )
     m.set_defaults(handler=cmd_metrics_compare)
 
     b = sub.add_parser(
@@ -418,6 +864,16 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=None,
         help="Also write first episode as a single canonical intra JSON (schema identical to export-intra-trace)",
+    )
+    r.add_argument(
+        "--full-intra-trace",
+        action="store_true",
+        help="Deprecated: full BB stream is now the default; kept for compatibility",
+    )
+    r.add_argument(
+        "--dedupe-intra-trace",
+        action="store_true",
+        help="Collapse consecutive identical BB in intra_traces.jsonl (hurts edge/hotpath metrics)",
     )
     r.set_defaults(handler=cmd_rollout_random)
 
@@ -465,7 +921,368 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Also write first episode as a single canonical intra JSON",
     )
+    lstm.add_argument(
+        "--full-intra-trace",
+        action="store_true",
+        help="Deprecated: full BB stream is now the default",
+    )
+    lstm.add_argument(
+        "--dedupe-intra-trace",
+        action="store_true",
+        help="Collapse consecutive identical BB in intra_traces.jsonl",
+    )
     lstm.set_defaults(handler=cmd_rollout_lstm)
+
+    hrl = sub.add_parser(
+        "rollout-hrl",
+        help="PPO flat/hierarchical checkpoint rollouts for one function",
+    )
+    hrl.add_argument("--cfg", required=True)
+    hrl.add_argument("--func", required=True)
+    hrl.add_argument("--episodes", type=int, default=10)
+    hrl.add_argument("--seed", type=int, default=None)
+    hrl.add_argument(
+        "--max-steps",
+        type=int,
+        default=10_000,
+        help="Same semantics as rollout-random (0 = walk until CFG sink).",
+    )
+    hrl.add_argument("--out-dir", required=True)
+    hrl.add_argument(
+        "--checkpoint",
+        type=Path,
+        required=True,
+        help="Stem path to policy .pt + .json from train-hrl-ppo",
+    )
+    hrl.add_argument(
+        "--loop-profile",
+        type=Path,
+        default=None,
+        help="Optional loop_profile.json; default: use loop_profile path stored in checkpoint .json",
+    )
+    hrl.add_argument(
+        "--action-select",
+        choices=("argmax", "sample"),
+        default="argmax",
+    )
+    hrl.add_argument(
+        "--temperature",
+        type=float,
+        default=1.0,
+        help="Sampling temperature when --action-select sample",
+    )
+    hrl.add_argument(
+        "--top-p",
+        type=float,
+        default=1.0,
+        help="Top-p nucleus filtering for sampling (<=1.0)",
+    )
+    hrl.add_argument(
+        "--batch-episodes",
+        type=int,
+        default=1,
+        help="Run episodes in chunks (host-level microbatch scheduling)",
+    )
+    hrl.add_argument(
+        "--preset",
+        choices=("default", "fast", "quality"),
+        default="default",
+        help="Inference preset: fast=argmax, quality=stochastic sample",
+    )
+    hrl.add_argument(
+        "--cpu-threads",
+        type=int,
+        default=None,
+        help="Optional torch CPU thread count for rollout",
+    )
+    hrl.add_argument("--device", default="cpu")
+    hrl.add_argument(
+        "--write-canonical-intra",
+        type=Path,
+        default=None,
+        help="Also write first episode as a single canonical intra JSON",
+    )
+    hrl.add_argument(
+        "--full-intra-trace",
+        action="store_true",
+        help="Deprecated: full BB stream is now the default",
+    )
+    hrl.add_argument(
+        "--dedupe-intra-trace",
+        action="store_true",
+        help="Collapse consecutive identical BB in intra_traces.jsonl",
+    )
+    hrl.add_argument("--window-back", type=int, default=1)
+    hrl.set_defaults(handler=cmd_rollout_hrl)
+
+    tr = sub.add_parser(
+        "train-hrl-ppo",
+        help="Train flat or hierarchical PPO for CFG trace synthesis",
+    )
+    tr.add_argument("--cfg", type=Path, required=True)
+    tr.add_argument("--func", required=True)
+    tr.add_argument("--out-stem", type=Path, required=True)
+    tr.add_argument("--device", default="cpu")
+    tr.add_argument("--seed", type=int, default=42)
+    tr.add_argument("--max-steps", type=int, default=10_000)
+    tr.add_argument("--iterations", type=int, default=40)
+    tr.add_argument("--steps-per-iter", type=int, default=4096)
+    tr.add_argument("--epochs", type=int, default=4)
+    tr.add_argument("--minibatch-size", type=int, default=512)
+    tr.add_argument("--lr", type=float, default=3e-4)
+    tr.add_argument("--gamma", type=float, default=0.99)
+    tr.add_argument("--gae-lambda", type=float, default=0.95)
+    tr.add_argument("--clip-coef", type=float, default=0.2)
+    tr.add_argument("--vf-coef", type=float, default=0.5)
+    tr.add_argument("--ent-coef", type=float, default=0.01)
+    tr.add_argument("--max-grad-norm", type=float, default=0.5)
+    tr.add_argument("--hidden", type=int, default=128)
+    tr.add_argument("--hierarchical", action="store_true")
+    tr.add_argument("--num-modes", type=int, default=4)
+    tr.add_argument("--z-embed-dim", type=int, default=8)
+    tr.add_argument("--manager-every", type=int, default=4)
+    tr.add_argument("--pgo-log-scale", type=float, default=0.5)
+    tr.add_argument("--invalid-action-penalty", type=float, default=-1.0)
+    tr.add_argument("--repeat-bb-penalty-scale", type=float, default=0.0)
+    tr.add_argument("--truncation-penalty", type=float, default=0.0)
+    tr.add_argument("--terminal-kl-scale", type=float, default=0.0)
+    tr.add_argument("--reference", type=Path, default=None)
+    tr.add_argument("--reference-compressed", action="store_true")
+    tr.add_argument(
+        "--init-checkpoint",
+        type=Path,
+        default=None,
+        help="Optional warm-start checkpoint stem (.pt/.json)",
+    )
+    tr.add_argument(
+        "--freeze-mode",
+        choices=("none", "head-only"),
+        default="none",
+        help="Parameter-freeze preset for adaptation",
+    )
+    tr.add_argument("--train-report", type=Path, default=None)
+    tr.add_argument(
+        "--tb-logdir",
+        type=Path,
+        default=None,
+        help="If set, write TensorBoard scalars under this directory",
+    )
+    tr.add_argument(
+        "--tb-run-name",
+        default="train_hrl_ppo",
+        help="TensorBoard run subdir name (used only with --tb-logdir)",
+    )
+    tr.add_argument(
+        "--loop-profile",
+        type=Path,
+        default=None,
+        help="Optional JSON from compute-loop-profile (adds loop obs + optional aux head)",
+    )
+    tr.add_argument(
+        "--loop-timing-scale",
+        type=float,
+        default=0.0,
+        help="Reward scale for matching loop-header visit counts to reference",
+    )
+    tr.add_argument(
+        "--ref-edge-log-scale",
+        type=float,
+        default=0.0,
+        help="Reward scale * log p_ref(action|bb) from loop_profile (needs --loop-profile)",
+    )
+    tr.add_argument(
+        "--short-path-penalty-scale",
+        type=float,
+        default=0.0,
+        help="Subtract at episode end when transition count << reference path_stats",
+    )
+    tr.add_argument(
+        "--no-loop-proposal-defaults",
+        action="store_true",
+        help="With --loop-profile, do not auto-fill ref-edge / short-path / loop-timing scales",
+    )
+    tr.add_argument("--window-back", type=int, default=1)
+    tr.add_argument("--aux-exit-head", type=int, choices=(0, 1), default=1)
+    tr.add_argument("--aux-exit-coef", type=float, default=0.05)
+    tr.add_argument("--bc-epochs", type=int, default=0)
+    tr.add_argument("--bc-batch-size", type=int, default=64)
+    tr.add_argument("--bc-aux-coef", type=float, default=0.1)
+    tr.set_defaults(handler=cmd_train_hrl_ppo)
+
+    trc = sub.add_parser(
+        "train-hrl-ppo-corpus",
+        help="Stage A corpus pretrain for shared PPO/HRL checkpoint",
+    )
+    trc.add_argument("--corpus-index", type=Path, required=True)
+    trc.add_argument("--out-stem", type=Path, required=True)
+    trc.add_argument("--device", default="cpu")
+    trc.add_argument("--seed", type=int, default=42)
+    trc.add_argument("--rounds", type=int, default=3)
+    trc.add_argument("--tasks-per-round", type=int, default=8)
+    trc.add_argument(
+        "--sampler",
+        choices=("uniform_program", "weighted_program", "curriculum"),
+        default="weighted_program",
+    )
+    trc.add_argument("--default-max-steps", type=int, default=10_000)
+    trc.add_argument("--per-task-iterations", type=int, default=2)
+    trc.add_argument("--per-task-steps-per-iter", type=int, default=1024)
+    trc.add_argument("--epochs", type=int, default=2)
+    trc.add_argument("--minibatch-size", type=int, default=256)
+    trc.add_argument("--lr", type=float, default=3e-4)
+    trc.add_argument("--gamma", type=float, default=0.99)
+    trc.add_argument("--gae-lambda", type=float, default=0.95)
+    trc.add_argument("--clip-coef", type=float, default=0.2)
+    trc.add_argument("--vf-coef", type=float, default=0.5)
+    trc.add_argument("--ent-coef", type=float, default=0.01)
+    trc.add_argument("--max-grad-norm", type=float, default=0.5)
+    trc.add_argument("--hidden", type=int, default=128)
+    trc.add_argument("--hierarchical", action="store_true")
+    trc.add_argument("--num-modes", type=int, default=4)
+    trc.add_argument("--z-embed-dim", type=int, default=8)
+    trc.add_argument("--manager-every", type=int, default=4)
+    trc.add_argument("--pgo-log-scale", type=float, default=0.5)
+    trc.add_argument("--invalid-action-penalty", type=float, default=-1.0)
+    trc.add_argument("--repeat-bb-penalty-scale", type=float, default=0.0)
+    trc.add_argument("--truncation-penalty", type=float, default=0.0)
+    trc.add_argument("--terminal-kl-scale", type=float, default=0.02)
+    trc.add_argument("--loop-timing-scale", type=float, default=0.0)
+    trc.add_argument("--ref-edge-log-scale", type=float, default=0.0)
+    trc.add_argument("--short-path-penalty-scale", type=float, default=0.0)
+    trc.add_argument(
+        "--no-loop-proposal-defaults",
+        action="store_true",
+        help="Do not auto-fill ref-edge / short-path / loop-timing when a task has loop_profile",
+    )
+    trc.add_argument("--aux-exit-head", type=int, choices=(0, 1), default=1)
+    trc.add_argument("--aux-exit-coef", type=float, default=0.05)
+    trc.add_argument("--bc-epochs", type=int, default=0)
+    trc.add_argument("--bc-batch-size", type=int, default=64)
+    trc.add_argument("--bc-aux-coef", type=float, default=0.1)
+    trc.add_argument("--enforce-shared-max-actions", action="store_true")
+    trc.add_argument("--tb-logdir", type=Path, default=None)
+    trc.add_argument(
+        "--no-tensorboard",
+        action="store_true",
+        help="Disable TensorBoard (default: <out-stem.parent>/tensorboard/)",
+    )
+    trc.add_argument(
+        "--corpus-snapshots",
+        action="store_true",
+        help="After each task, copy .pt/.json to corpus_snapshots/ next to the checkpoint stem",
+    )
+    trc.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Print one line per PPO iteration within each corpus task",
+    )
+    trc.add_argument("--train-report", type=Path, default=None)
+    trc.set_defaults(handler=cmd_train_hrl_ppo_corpus)
+
+    ad = sub.add_parser(
+        "adapt-hrl-ppo-graph",
+        help="Stage B graph adaptation from foundation checkpoint",
+    )
+    ad.add_argument("--cfg", type=Path, required=True)
+    ad.add_argument("--func", required=True)
+    ad.add_argument("--reference", type=Path, required=True)
+    ad.add_argument("--reference-compressed", action="store_true")
+    ad.add_argument("--foundation-checkpoint", type=Path, required=True)
+    ad.add_argument("--out-stem", type=Path, required=True)
+    ad.add_argument("--freeze-mode", choices=("none", "head-only"), default="head-only")
+    ad.add_argument("--device", default="cpu")
+    ad.add_argument("--seed", type=int, default=42)
+    ad.add_argument("--max-steps", type=int, default=10_000)
+    ad.add_argument("--adapt-iterations", type=int, default=20)
+    ad.add_argument("--adapt-steps-per-iter", type=int, default=1024)
+    ad.add_argument("--epochs", type=int, default=2)
+    ad.add_argument("--minibatch-size", type=int, default=256)
+    ad.add_argument("--lr", type=float, default=3e-4)
+    ad.add_argument("--gamma", type=float, default=0.99)
+    ad.add_argument("--gae-lambda", type=float, default=0.95)
+    ad.add_argument("--clip-coef", type=float, default=0.2)
+    ad.add_argument("--vf-coef", type=float, default=0.5)
+    ad.add_argument("--ent-coef", type=float, default=0.01)
+    ad.add_argument("--max-grad-norm", type=float, default=0.5)
+    ad.add_argument("--hierarchical", action="store_true")
+    ad.add_argument("--num-modes", type=int, default=4)
+    ad.add_argument("--z-embed-dim", type=int, default=8)
+    ad.add_argument("--manager-every", type=int, default=4)
+    ad.add_argument("--hidden", type=int, default=128)
+    ad.add_argument("--pgo-log-scale", type=float, default=0.5)
+    ad.add_argument("--invalid-action-penalty", type=float, default=-1.0)
+    ad.add_argument("--repeat-bb-penalty-scale", type=float, default=0.0)
+    ad.add_argument("--truncation-penalty", type=float, default=0.0)
+    ad.add_argument("--terminal-kl-scale", type=float, default=0.02)
+    ad.add_argument("--loop-profile", type=Path, default=None)
+    ad.add_argument("--loop-timing-scale", type=float, default=0.0)
+    ad.add_argument("--ref-edge-log-scale", type=float, default=0.0)
+    ad.add_argument("--short-path-penalty-scale", type=float, default=0.0)
+    ad.add_argument(
+        "--no-loop-proposal-defaults",
+        action="store_true",
+        help="With --loop-profile, do not auto-fill ref-edge / short-path / loop-timing scales",
+    )
+    ad.add_argument("--aux-exit-head", type=int, choices=(0, 1), default=1)
+    ad.add_argument("--aux-exit-coef", type=float, default=0.05)
+    ad.add_argument("--bc-epochs", type=int, default=2)
+    ad.add_argument("--bc-batch-size", type=int, default=64)
+    ad.add_argument("--bc-aux-coef", type=float, default=0.1)
+    ad.add_argument("--tb-logdir", type=Path, default=None)
+    ad.add_argument("--tb-run-name", default="stage_b_adapt")
+    ad.add_argument("--train-report", type=Path, default=None)
+    ad.set_defaults(handler=cmd_adapt_hrl_ppo_graph)
+
+    bi = sub.add_parser(
+        "build-rl-corpus-index",
+        help="Build RL corpus index JSON from checkpoint/cross JSONL rows",
+    )
+    bi.add_argument("--input-jsonl", type=Path, required=True)
+    bi.add_argument("--out", type=Path, required=True)
+    bi.add_argument("--default-max-steps", type=int, default=10_000)
+    bi.add_argument("--default-weight", type=float, default=1.0)
+    bi.add_argument("--max-refs-per-task", type=int, default=16)
+    bi.add_argument("--id-key", default="program_id")
+    bi.add_argument(
+        "--loop-profile-dir",
+        type=Path,
+        default=None,
+        help="Write per-(cfg,func) loop_profile JSON and add loop_profile field to entries",
+    )
+    bi.set_defaults(handler=cmd_build_rl_corpus_index)
+
+    clp = sub.add_parser(
+        "compute-loop-profile",
+        help="Compute loop/exit statistics JSON from CFG + reference trace(s)",
+    )
+    clp.add_argument("--cfg", type=Path, required=True)
+    clp.add_argument("--func", required=True)
+    clp.add_argument(
+        "--reference",
+        type=Path,
+        action="append",
+        required=True,
+        help="Reference trace path (repeat for multiple)",
+    )
+    clp.add_argument("--reference-compressed", action="store_true")
+    clp.add_argument("--out", type=Path, required=True)
+    clp.set_defaults(handler=cmd_compute_loop_profile)
+
+    eg = sub.add_parser(
+        "evaluate-two-factor-gates",
+        help="Evaluate in/near/out splits and apply quality+latency acceptance gates",
+    )
+    eg.add_argument("--spec", type=Path, required=True)
+    eg.add_argument("--out", type=Path, required=True)
+    eg.add_argument("--gate-block-kl", type=float, default=0.5)
+    eg.add_argument("--gate-edge-kl", type=float, default=0.8)
+    eg.add_argument("--gate-hotpath", type=float, default=0.7)
+    eg.add_argument("--gate-speedup", type=float, default=5.0)
+    eg.add_argument("--epsilon", type=float, default=1e-8)
+    eg.add_argument("--ngram-min", type=int, default=2)
+    eg.add_argument("--ngram-max", type=int, default=4)
+    eg.add_argument("--top-k", type=int, default=64)
+    eg.set_defaults(handler=cmd_evaluate_two_factor_gates)
 
     return p
 

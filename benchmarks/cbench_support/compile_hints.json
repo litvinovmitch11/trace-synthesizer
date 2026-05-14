@@ -1,0 +1,22 @@
+{
+  "cbench-consumer-lame": {
+    "clang_extra_cflags": [
+      "-DLAMEPARSE",
+      "-DLAMESNDFILE",
+      "-DHAVEMPGLIB"
+    ]
+  },
+  "cbench-consumer-mad": {
+    "clang_extra_cflags": ["-DHAVE_CONFIG_H", "-DFPM_DEFAULT"],
+    "sources_exclude": ["audio_esd.c"]
+  },
+  "cbench-security-pgp": {
+    "clang_extra_cflags": ["-DPORTABLE", "-DMPORTABLE"],
+    "sources_exclude": ["gettime.c"],
+    "extra_include_repo_relative": ["benchmarks/cbench_support"],
+    "extra_sources_repo_relative": ["benchmarks/cbench_support/xopenme_stub.c"]
+  },
+  "cbench-telecom-gsm": {
+    "clang_extra_cflags": ["-DSASR"]
+  }
+}

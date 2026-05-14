@@ -4,30 +4,38 @@ BUILD_TYPE=Debug
 
 C_COMPILER=clang-21
 CXX_COMPILER=clang++-21
-CLANG_TIDY=clang-tidy-21
-CLANG_FORMAT=clang-format-21
 
 # LLVM install prefix for CMake (-DLT_LLVM_INSTALL_DIR=...). Override on the command line or in the environment.
 LLVM_INSTALL_DIR ?= /home/mitchell/dev/llvm/llvm-project/build-install
 
 NPROC=8
 
-.PHONY: help configure build clean clean-output test-py check ctuning-bootstrap plugins-demo random-baseline dataset-cbench train-lstm lstm-eval visualize-trace compare-traces tensorboard package-artifacts
+.PHONY: help configure build clean clean-output test-py check exp-diamond exp-sorting exp-smart exp-mutation visualize-trace
 
 help:
-	@echo "trace-synthesizer — common targets"
-	@echo "  make configure        — cmake -B \$(BUILD_DIR) (uses LLVM_INSTALL_DIR=\$(LLVM_INSTALL_DIR))"
-	@echo "  make build            — compile plugins + DynamoRIO"
-	@echo "  make test-py          — poetry run pytest"
-	@echo "  make plugins-demo     — demo of LLVM plugins and DynamoRIO tracer"
-	@echo "  make random-baseline  — run random walk baseline and compute metrics"
-	@echo "  make dataset-cbench   — build JSONL dataset from cbench programs"
-	@echo "  make train-lstm       — train Feature-Window LSTM on dataset-cbench"
-	@echo "  make lstm-eval        — evaluate trained LSTM and compare with baseline"
-	@echo "  make tensorboard      — open TensorBoard for training logs"
-	@echo "  make package-artifacts— copy final dataset/model/reports"
-	@echo "  make visualize-trace  — visualize CFG and overlay trace (CFG=... FUNC=... [TRACE=...] [OUT=...])"
-	@echo "  make compare-traces   — compare two traces (REF=... CAND=... FUNC=... OUT=...)"
+	@echo "======================================================================"
+	@echo " TraceSynthesizer — Makefile for LLVM Plugins and Experiments"
+	@echo "======================================================================"
+	@echo ""
+	@echo "Build Targets:"
+	@echo "  make configure        — Run cmake -B \$(BUILD_DIR) (uses LLVM_INSTALL_DIR)"
+	@echo "  make build            — Compile LLVM CFGDumper plugin and DynamoRIO tracer"
+	@echo "  make clean            — Clean C++ build artifacts"
+	@echo "  make clean-output     — Remove all experiment outputs (\$(OUTPUT_DIR))"
+	@echo ""
+	@echo "Test Targets:"
+	@echo "  make test-py          — Run Python unit tests via pytest"
+	@echo "  make check            — Alias for make test-py"
+	@echo ""
+	@echo "Experiment Targets (End-to-End pipelines):"
+	@echo "  make exp-diamond      — Run Experiment 1: Context Dependency (Diamond Problem)"
+	@echo "  make exp-mutation     — Run Experiment 2: Basic CFG Mutation"
+	@echo "  make exp-sorting      — Run Experiment 3: Complex Loops (Sorting algorithm)"
+	@echo "  make exp-smart        — Run Experiment 4: Smart Compiler Mutations (Loop Peeling)"
+	@echo ""
+	@echo "Utilities:"
+	@echo "  make visualize-trace  — Visualize CFG and overlay trace (CFG=... FUNC=... [TRACE=...] [OUT=...])"
+	@echo ""
 
 configure:
 	cmake -B $(BUILD_DIR) \
@@ -49,43 +57,23 @@ check: test-py
 
 clean-output:
 	rm -rf $(OUTPUT_DIR)/
+	rm -rf benchmarks/local/*/out/*
+	rm -rf benchmarks/local/*/build_base/*
+	rm -rf benchmarks/local/*/build_mutated/*
+	rm -rf benchmarks/local/*/build/*
 
-plugins-demo:
-	@chmod +x scripts/run_plugins_demo.sh 2>/dev/null || true
-	@./scripts/run_plugins_demo.sh $(ARGS)
+exp-diamond:
+	PYTHONPATH=. poetry run python3 scripts/run_diamond_exp.py
 
-random-baseline:
-	@chmod +x scripts/run_random_baseline.sh 2>/dev/null || true
-	@./scripts/run_random_baseline.sh $(ARGS)
+exp-mutation:
+	PYTHONPATH=. poetry run python3 scripts/run_cross_mutation_exp.py
 
-dataset-cbench: ctuning-bootstrap
-	@chmod +x scripts/run_dataset_cbench.sh 2>/dev/null || true
-	@./scripts/run_dataset_cbench.sh $(ARGS)
+exp-sorting:
+	PYTHONPATH=. poetry run python3 scripts/run_cross_sorting_exp.py
 
-train-lstm:
-	@chmod +x scripts/run_train_lstm.sh 2>/dev/null || true
-	@./scripts/run_train_lstm.sh $(ARGS)
-
-lstm-eval:
-	@chmod +x scripts/run_lstm_eval.sh 2>/dev/null || true
-	@./scripts/run_lstm_eval.sh $(ARGS)
+exp-smart:
+	PYTHONPATH=. poetry run python3 scripts/run_cross_smart_exp.py
 
 visualize-trace:
 	@chmod +x scripts/visualize_trace.sh 2>/dev/null || true
 	@./scripts/visualize_trace.sh
-
-compare-traces:
-	@chmod +x scripts/compare_traces.sh 2>/dev/null || true
-	@./scripts/compare_traces.sh
-
-tensorboard:
-	@chmod +x scripts/run_tensorboard.sh 2>/dev/null || true
-	@./scripts/run_tensorboard.sh $(ARGS)
-
-package-artifacts:
-	@chmod +x scripts/package_experiment_artifacts.sh 2>/dev/null || true
-	@./scripts/package_experiment_artifacts.sh $(ARGS)
-
-ctuning-bootstrap:
-	@chmod +x scripts/init_ctuning_submodule.sh 2>/dev/null || true
-	@./scripts/init_ctuning_submodule.sh
