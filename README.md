@@ -17,9 +17,6 @@ Comprehensive documentation is provided in two languages:
 - **English**:
   - [Reproduction Guide](docs/en/REPRODUCTION.md)
   - [Experiments Report](docs/en/EXPERIMENTS.md)
-- **Russian (Русский)**:
-  - [Руководство по воспроизведению](docs/ru/REPRODUCTION.md)
-  - [Отчет об экспериментах](docs/ru/EXPERIMENTS.md)
 
 ## Quick Start
 

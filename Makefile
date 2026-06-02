@@ -32,6 +32,7 @@ help:
 	@echo "  make exp-mutation     — Run Experiment 2: Basic CFG Mutation"
 	@echo "  make exp-sorting      — Run Experiment 3: Complex Loops (Sorting algorithm)"
 	@echo "  make exp-smart        — Run Experiment 4: Smart Compiler Mutations (Loop Peeling)"
+	@echo "  make exp-opt          — Run Experiment 5: Cross-Optimization Levels (O0 to O3)"
 	@echo ""
 	@echo "Utilities:"
 	@echo "  make visualize-trace  — Visualize CFG and overlay trace (CFG=... FUNC=... [TRACE=...] [OUT=...])"
@@ -73,6 +74,9 @@ exp-sorting:
 
 exp-smart:
 	PYTHONPATH=. poetry run python3 scripts/run_cross_smart_exp.py
+
+exp-opt:
+	PYTHONPATH=. poetry run python3 scripts/run_cross_opt_exp.py
 
 visualize-trace:
 	@chmod +x scripts/visualize_trace.sh 2>/dev/null || true
