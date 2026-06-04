@@ -180,7 +180,8 @@ public:
 
       BlockObj["instr_count"] = getInstructionCount(MBB);
       BlockInstrStats Stats = getInstrStats(MBB);
-      BlockObj["branch_instr_count"] = static_cast<int64_t>(Stats.BranchInstrCount);
+      BlockObj["branch_instr_count"] =
+          static_cast<int64_t>(Stats.BranchInstrCount);
       BlockObj["conditional_branch_count"] =
           static_cast<int64_t>(Stats.ConditionalBranchCount);
       BlockObj["unconditional_branch_count"] =
@@ -207,10 +208,8 @@ public:
 
       BlockObj["is_loop_header"] = MLI.isLoopHeader(&MBB);
       const MachineLoop *InnerL = MLI.getLoopFor(&MBB);
-      BlockObj["is_loop_latch"] =
-          InnerL && InnerL->getLoopLatch() == &MBB;
-      BlockObj["is_loop_exiting"] =
-          InnerL && InnerL->isLoopExiting(&MBB);
+      BlockObj["is_loop_latch"] = InnerL && InnerL->getLoopLatch() == &MBB;
+      BlockObj["is_loop_exiting"] = InnerL && InnerL->isLoopExiting(&MBB);
 
       int64_t BackEdgeIn = 0;
       if (MLI.isLoopHeader(&MBB)) {

@@ -49,9 +49,11 @@ def _parse_block(raw: dict[str, Any]) -> BasicBlock:
         is_loop_exiting=bool(raw.get("is_loop_exiting", False)),
         back_edge_in_count=int(raw.get("back_edge_in_count", 0)),
         terminator_kind=str(raw.get("terminator_kind", "none")),
-        ir2vec_embedding=tuple(float(x) for x in raw.get("ir2vec_embedding", []))
-        if raw.get("ir2vec_embedding") is not None
-        else None,
+        ir2vec_embedding=(
+            tuple(float(x) for x in raw.get("ir2vec_embedding", []))
+            if raw.get("ir2vec_embedding") is not None
+            else None
+        ),
         successors=tuple(succs),
     )
 

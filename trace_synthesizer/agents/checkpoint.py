@@ -10,7 +10,10 @@ import torch
 import torch.nn as nn
 
 from trace_synthesizer.agents.feature_window_lstm_policy import FeatureWindowLstmPolicy
-from trace_synthesizer.agents.ppo_policies import FlatActorCritic, HierarchicalActorCritic
+from trace_synthesizer.agents.ppo_policies import (
+    FlatActorCritic,
+    HierarchicalActorCritic,
+)
 
 CHECKPOINT_SCHEMA_VERSION = 1
 POLICY_TYPE_MASKED_LSTM = "masked_lstm"

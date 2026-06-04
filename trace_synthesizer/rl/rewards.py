@@ -7,7 +7,11 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Any
 
-from trace_synthesizer.core.grammar import CfgProgram, normalized_successor_weights, ordered_successors
+from trace_synthesizer.core.grammar import (
+    CfgProgram,
+    normalized_successor_weights,
+    ordered_successors,
+)
 
 
 def counts_to_probabilities(
@@ -19,9 +23,7 @@ def counts_to_probabilities(
     return {k: (float(counts.get(k, 0)) + float(epsilon)) / total for k in support}
 
 
-def kl_divergence(
-    p: dict[int, float], q: dict[int, float], support: set[int]
-) -> float:
+def kl_divergence(p: dict[int, float], q: dict[int, float], support: set[int]) -> float:
     acc = 0.0
     for k in support:
         pi = p[k]

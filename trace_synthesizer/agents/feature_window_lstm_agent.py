@@ -88,7 +88,9 @@ class FeatureWindowLSTMCfgAgent:
         self._hx = None
         self._feat_buf.clear()
         if self._global_dim > 0:
-            g = global_cfg_summary_vector(self._grammar, self._fn, target_dim=self._global_dim)
+            g = global_cfg_summary_vector(
+                self._grammar, self._fn, target_dim=self._global_dim
+            )
             if g.shape[0] != self._global_dim:
                 raise ValueError(
                     f"global summary dim {g.shape[0]} != {self._global_dim}"

@@ -7,7 +7,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from trace_synthesizer.agents.ppo_policies import FlatActorCritic, HierarchicalActorCritic
+from trace_synthesizer.agents.ppo_policies import (
+    FlatActorCritic,
+    HierarchicalActorCritic,
+)
 from trace_synthesizer.rl.rollout_buffer import RolloutBatch, compute_gae
 
 
@@ -143,8 +146,12 @@ def ppo_update(
                     if batch.old_manager_log_probs is not None
                     else None
                 ),
-                manager_fired=batch.manager_fired[mb] if batch.manager_fired is not None else None,
-                aux_targets=batch.aux_targets[mb] if batch.aux_targets is not None else None,
+                manager_fired=(
+                    batch.manager_fired[mb] if batch.manager_fired is not None else None
+                ),
+                aux_targets=(
+                    batch.aux_targets[mb] if batch.aux_targets is not None else None
+                ),
             )
             sub.advantages = batch.advantages[mb]  # type: ignore[attr-defined]
             sub.returns = batch.returns[mb]  # type: ignore[attr-defined]

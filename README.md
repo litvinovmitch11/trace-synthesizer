@@ -1,46 +1,58 @@
 # TraceSynthesizer
 
-TraceSynthesizer is a reinforcement learning (RL) framework designed to synthesize realistic program execution traces for LLVM compiler optimization models (specifically targeting the MLGO infrastructure).
+Synthesize realistic program **execution traces** (basic-block sequences) for
+LLVM compiler-ML tasks — directly from the static control-flow graph (CFG),
+PGO profile, and per-block features, **without** re-instrumenting the binary
+after every compiler pass.
 
-Collecting true execution traces post-optimizations (like RegAlloc) is notoriously difficult because compiler passes alter the Control Flow Graph (CFG) topology. TraceSynthesizer solves this by generating statistically accurate, context-aware execution paths directly from the static CFG and profile information (PGO), without needing to run the actual compiled binary.
+Collecting real traces with dynamic instrumentation (DynamoRIO) is slow, and
+every CFG-mutating pass (e.g. RegAlloc spills) invalidates them. TraceSynthesizer
+learns a generator that reproduces the statistical behavior of real traces and
+transfers **zero-shot** to mutated CFGs — useful for trace-based MLGO pipelines.
 
-## Key Features
-- **LLVM CFGDumper Plugin:** Extracts the CFG along with node semantics and edge weights.
-- **IR2Vec Integration:** Understands code semantics beyond just node IDs.
-- **Context-Aware Sequence Modeling:** Employs LSTMs and Proximal Policy Optimization (PPO) with a sliding feature window to resolve complex control-flow dynamics, like the "Diamond Problem".
-- **Zero-Shot Structural Generalization:** The models can accurately synthesize traces for programs that have undergone extreme compiler mutations (like loop peeling or branch inversions) without retraining.
-- **Hierarchical RL (Optional):** Implements a Manager-Worker FeUdal architecture for handling complex state machines.
+## Highlights
+- **LLVM CFGDumper plugin** — dumps the CFG with block features + PGO edge weights.
+- **IR2Vec embeddings** — 75-D per-block semantics for structural generalization.
+- **Four generators** — Random-PGO, LSTM behavioral cloning, Flat PPO, Hierarchical PPO.
+- **Masked CFG-walk MDP** — the agent can only emit topologically valid traces.
+- **Zero-shot transfer** — Flat PPO carries a base-CFG policy to mutated graphs and across `-O0…-O3`.
 
-## Documentation
-
-Comprehensive documentation is provided in two languages:
-- **English**:
-  - [Reproduction Guide](docs/en/REPRODUCTION.md)
-  - [Experiments Report](docs/en/EXPERIMENTS.md)
-
-## Quick Start
-
-The easiest way to reproduce the findings is to use the provided `Makefile`.
-
+## Install & build
 ```bash
-# Compile the LLVM plugin and DynamoRIO tools
-make configure
-make build
-
-# Run the benchmark experiments (Zero-shot generalization tests)
-make exp-diamond    # Context Dependency (State Machine / Diamond Problem)
-make exp-mutation   # Basic CFG Mutation Generalization
-make exp-sorting    # Complex Loops Generalization
-make exp-smart      # Extreme Compiler Mutations (Loop Peeling)
-
-# Clean experiment outputs
-make clean-output
+export LLVM_INSTALL_DIR=/path/to/llvm-21-install   # if not the Makefile default
+make configure        # cmake
+make build            # CFGDumper.so + InstrTracer.so + DynamoRIO
+poetry install        # Python deps (CPU PyTorch)
+make test-py          # run the test suite
 ```
 
-## Creating Large Datasets (e.g. for cBench)
+## Run the experiments
+Each target builds artifacts, trains the agents, rolls out, and scores — one
+command, mapped to thesis Section 7:
+```bash
+make exp-trigger    # state machine (in-domain)
+make exp-diamond    # context dependency (diamond)
+make exp-mutation   # zero-shot CFG mutation
+make exp-sorting    # zero-shot nested loops
+make exp-smart      # extreme mutations (peeling / branch inversion)
+make exp-opt        # cross-optimization O0 → O3
+make exp-all        # all of the above
+make clean-output   # remove generated artifacts
+```
 
-To train the models for industrial use on thousands of functions:
-1. Use `scripts/build_cpp_dataset_artifacts.sh` to extract `cfg.json` and DynamoRIO traces from your codebase.
-2. Create a JSON manifest (`spec.json`) mapping IDs to these artifacts.
-3. Precompute the tensor dataset using `scripts/build_multi_program_intra_dataset.py --with-target-context`.
-4. Train the PPO agent or LSTM instantly on the resulting `cross.train.jsonl` using `scripts/train-hrl-ppo` or `scripts/train_feature_window_lstm.py`.
+Run the pipeline on your own program with the CLI
+(`python -m trace_synthesizer --help`); see
+[OVERVIEW §4.2](docs/en/OVERVIEW.md#42-one-program-end-to-end-manual).
+
+## Documentation
+- **[OVERVIEW](docs/en/OVERVIEW.md)** — architecture, every mechanism, and how to run it.
+- **[REPRODUCTION](docs/en/REPRODUCTION.md)** — rebuild and regenerate all results.
+- **[EXPERIMENTS](docs/en/EXPERIMENTS.md)** — measured results.
+
+## Results in one line
+Hierarchical PPO is strongest **in-domain** (trigger, diamond: overlap 1.0);
+**Flat PPO** is the strongest **zero-shot transfer** method (mutation 0.99,
+sorting 1.0, O3 0.89). See [EXPERIMENTS](docs/en/EXPERIMENTS.md).
+
+## License
+See [LICENSE](LICENSE).

@@ -13,7 +13,10 @@ from trace_synthesizer.agents.checkpoint import (
     POLICY_TYPE_PPO_HIERARCHICAL,
     load_policy_checkpoint,
 )
-from trace_synthesizer.agents.ppo_policies import FlatActorCritic, HierarchicalActorCritic
+from trace_synthesizer.agents.ppo_policies import (
+    FlatActorCritic,
+    HierarchicalActorCritic,
+)
 
 ActionSelect = Literal["argmax", "sample"]
 
@@ -56,7 +59,9 @@ class HRLPPOCfgAgent:
         else:
             raise TypeError(f"Unsupported PPO policy type: {type(self._policy)}")
         if ptype is not None and ptype != self._kind:
-            raise ValueError(f"Checkpoint policy_type {ptype!r} != model {self._kind!r}")
+            raise ValueError(
+                f"Checkpoint policy_type {ptype!r} != model {self._kind!r}"
+            )
 
         self._t = 0
         self._z: torch.Tensor | None = None

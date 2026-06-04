@@ -137,9 +137,7 @@ def main() -> None:
                 max(1, max_out_degree_for_function(grammar.function(func))),
             )
     max_actions = (
-        int(args.max_actions)
-        if args.max_actions is not None
-        else inferred_max_actions
+        int(args.max_actions) if args.max_actions is not None else inferred_max_actions
     )
 
     for entry in entries:
@@ -152,7 +150,9 @@ def main() -> None:
             raise SystemExit(f"cfg not found: {cfg}")
         comp_paths = _collect_compressed(entry, base)
         if not comp_paths:
-            raise SystemExit(f"entry {pid!r}: no compressed_paths / compressed_glob matched")
+            raise SystemExit(
+                f"entry {pid!r}: no compressed_paths / compressed_glob matched"
+            )
         if args.max_traces_per_program > 0:
             comp_paths = comp_paths[: int(args.max_traces_per_program)]
 
@@ -160,9 +160,10 @@ def main() -> None:
         subdir.mkdir(parents=True, exist_ok=True)
         jsonl_path = subdir / f"train_intra_{func}.jsonl"
         n_written = 0
-        with jsonl_path.open("w", encoding="utf-8") as f, cross_path.open(
-            "a", encoding="utf-8"
-        ) as cross_f:
+        with (
+            jsonl_path.open("w", encoding="utf-8") as f,
+            cross_path.open("a", encoding="utf-8") as cross_f,
+        ):
             for i, comp in enumerate(comp_paths):
                 if not comp.is_file():
                     raise SystemExit(f"entry {pid!r}: not a file {comp}")
@@ -193,7 +194,9 @@ def main() -> None:
                     if succ_slots < 0:
                         succ_slots = max_actions
                     bb_path = _bb_path_from_sequence(rec["sequence"], func)
-                    valid = _valid_cfg_path(grammar, func, bb_path)[: int(args.max_path_len)]
+                    valid = _valid_cfg_path(grammar, func, bb_path)[
+                        : int(args.max_path_len)
+                    ]
                     if len(valid) < 2:
                         continue
                     try:
@@ -221,7 +224,9 @@ def main() -> None:
                         "max_actions": int(max_actions),
                         "use_global_summary": bool(args.use_global_summary),
                         "feature_dim": int(fd),
-                        "global_dim": int(fd + 1) if bool(args.use_global_summary) else 0,
+                        "global_dim": (
+                            int(fd + 1) if bool(args.use_global_summary) else 0
+                        ),
                         "context_dim": int(x.shape[1]),
                     }
                 f.write(json.dumps(rec, ensure_ascii=False) + "\n")

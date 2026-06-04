@@ -109,7 +109,9 @@ def compute_loop_profile(
         }
 
     # Empirical exit-next: depth dropped on edge, or exiting block heuristic.
-    exit_pair_counts: dict[tuple[int, int], tuple[int, int]] = defaultdict(lambda: (0, 0))
+    exit_pair_counts: dict[tuple[int, int], tuple[int, int]] = defaultdict(
+        lambda: (0, 0)
+    )
     exit_marginal: dict[int, tuple[int, int]] = defaultdict(lambda: (0, 0))
 
     for path in bb_paths:
@@ -184,9 +186,7 @@ def compute_loop_profile(
         if tot_e <= 0.0:
             edge_action_p[str(bb.id)] = [1.0 / n] * n
         else:
-            edge_action_p[str(bb.id)] = [
-                (c + lap) / (tot_e + lap * n) for c in counts
-            ]
+            edge_action_p[str(bb.id)] = [(c + lap) / (tot_e + lap * n) for c in counts]
 
     trans_lens = sorted(max(0, len(p) - 1) for p in bb_paths if len(p) >= 1)
     if not trans_lens:

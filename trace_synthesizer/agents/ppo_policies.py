@@ -73,7 +73,9 @@ class FlatActorCritic(nn.Module):
         return lp, ent, vals
 
     @torch.no_grad()
-    def act(self, obs: torch.Tensor, mask: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def act(
+        self, obs: torch.Tensor, mask: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Sample one action per row.
 
@@ -168,7 +170,9 @@ class HierarchicalActorCritic(nn.Module):
     def manager_logits(self, obs: torch.Tensor) -> torch.Tensor:
         return self.manager(obs)
 
-    def forward(self, obs: torch.Tensor, z: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, obs: torch.Tensor, z: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         return self.forward_worker_critic(obs, z)
 
     def evaluate_actions(

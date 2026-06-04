@@ -51,9 +51,7 @@ def test_export_intra_matches_rollout_line_schema(tmp_path: Path) -> None:
 
 
 def test_intra_sequence_from_bb_path_preserves_repeats_when_requested() -> None:
-    seq = intra_sequence_from_bb_path(
-        "f", 0, [1, 1, 1, 2], dedupe_consecutive=False
-    )
+    seq = intra_sequence_from_bb_path("f", 0, [1, 1, 1, 2], dedupe_consecutive=False)
     assert [e["bb"] for e in seq] == [0, 1, 1, 1, 2]
     seq_d = intra_sequence_from_bb_path("f", 0, [1, 1, 1, 2], dedupe_consecutive=True)
     assert [e["bb"] for e in seq_d] == [0, 1, 2]

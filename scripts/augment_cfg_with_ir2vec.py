@@ -52,7 +52,9 @@ def main() -> None:
     if not bc.is_file():
         raise SystemExit(f"bc not found: {bc}")
 
-    with tempfile.NamedTemporaryFile(prefix="ir2vec_", suffix=".txt", delete=False) as tf:
+    with tempfile.NamedTemporaryFile(
+        prefix="ir2vec_", suffix=".txt", delete=False
+    ) as tf:
         tmp = Path(tf.name)
     cmd = [
         str(args.llvm_ir2vec.resolve()),

@@ -29,7 +29,7 @@ class RandomPGOAgent:
         bb_id = int(observation["bb_id"][0])
         mask = np.asarray(info["action_mask"], dtype=bool)
         block = self._grammar.function(fn).block_by_id()[bb_id]
-        
+
         # Always take CALL if available (greedy interprocedural)
         n = int(mask.shape[0])
         if n >= 2:

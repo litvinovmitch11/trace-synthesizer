@@ -10,7 +10,11 @@ import numpy as np
 import torch
 from gymnasium import spaces
 
-from trace_synthesizer.core.grammar import CfgProgram, max_out_degree_for_function, ordered_successors
+from trace_synthesizer.core.grammar import (
+    CfgProgram,
+    max_out_degree_for_function,
+    ordered_successors,
+)
 from trace_synthesizer.domain.program import BasicBlock, FunctionCFG
 from trace_synthesizer.features.block_features import BlockFeatures
 
@@ -60,7 +64,9 @@ class InterproceduralCFGWalkEnv(gym.Env):
         self._functions: dict[str, FunctionCFG] = by_name
         self._fn_names = sorted(by_name.keys())
         self._fn_to_id = {f: i for i, f in enumerate(self._fn_names)}
-        self._max_out = max((max_out_degree_for_function(fn) for fn in by_name.values()), default=0)
+        self._max_out = max(
+            (max_out_degree_for_function(fn) for fn in by_name.values()), default=0
+        )
         self._padded_out = max(1, self._max_out)
         self._action_n = self._padded_out + 2
 
@@ -108,18 +114,39 @@ class InterproceduralCFGWalkEnv(gym.Env):
 
     def _observation(self) -> dict[str, np.ndarray]:
         b = self._current_block()
-        base = BlockFeatures.from_block(b).as_tensor(device=self._device).detach().cpu().numpy()
+        base = (
+            BlockFeatures.from_block(b)
+            .as_tensor(device=self._device)
+            .detach()
+            .cpu()
+            .numpy()
+        )
         cd = min(1.0, float(len(self._stack)) / max(1.0, float(self._max_call_depth)))
-        
+
         # Add caller features
         if self._stack:
             caller_frame = self._stack[-1]
-            caller_b = self._functions[caller_frame.function_name].block_by_id()[caller_frame.caller_bb]
-            caller_feat = BlockFeatures.from_block(caller_b).as_tensor(device=self._device).detach().cpu().numpy()
+            caller_b = self._functions[caller_frame.function_name].block_by_id()[
+                caller_frame.caller_bb
+            ]
+            caller_feat = (
+                BlockFeatures.from_block(caller_b)
+                .as_tensor(device=self._device)
+                .detach()
+                .cpu()
+                .numpy()
+            )
         else:
             caller_feat = np.zeros_like(base)
-            
-        feat = np.concatenate([base.astype(np.float32), caller_feat.astype(np.float32), np.array([cd], dtype=np.float32)], axis=0)
+
+        feat = np.concatenate(
+            [
+                base.astype(np.float32),
+                caller_feat.astype(np.float32),
+                np.array([cd], dtype=np.float32),
+            ],
+            axis=0,
+        )
         return {
             "func_id": np.array([self._fn_to_id[self._fn]], dtype=np.int32),
             "bb_id": np.array([self._bb], dtype=np.int32),
@@ -165,32 +192,59 @@ class InterproceduralCFGWalkEnv(gym.Env):
         mask = self._valid_mask_array()
         if a < 0 or a >= self._action_n or not bool(mask[a]):
             obs = self._observation()
-            return obs, -1.0, True, False, {"action_mask": mask, "reason": "invalid_action"}
+            return (
+                obs,
+                -1.0,
+                True,
+                False,
+                {"action_mask": mask, "reason": "invalid_action"},
+            )
 
         b = self._current_block()
         succs = ordered_successors(b)
-        info: dict[str, Any] = {"action_mask": mask, "from_function": self._fn, "from_bb": self._bb}
+        info: dict[str, Any] = {
+            "action_mask": mask,
+            "from_function": self._fn,
+            "from_bb": self._bb,
+        }
 
         if a < self._padded_out:
             if a >= len(succs):
                 obs = self._observation()
-                return obs, -1.0, True, False, {"action_mask": mask, "reason": "invalid_action"}
+                return (
+                    obs,
+                    -1.0,
+                    True,
+                    False,
+                    {"action_mask": mask, "reason": "invalid_action"},
+                )
             self._bb = succs[a].target_id
             info["transition"] = "intra"
         elif a == self._padded_out:
             callee = self._call_target(b)
             if callee is None:
                 obs = self._observation()
-                return obs, -1.0, True, False, {"action_mask": mask, "reason": "invalid_action"}
+                return (
+                    obs,
+                    -1.0,
+                    True,
+                    False,
+                    {"action_mask": mask, "reason": "invalid_action"},
+                )
             # Continuation after return: successor with highest PGO prob (or smallest id).
             if succs:
                 nxt = sorted(
                     succs,
-                    key=lambda e: (-(e.prob if e.prob is not None else -1.0), e.target_id),
+                    key=lambda e: (
+                        -(e.prob if e.prob is not None else -1.0),
+                        e.target_id,
+                    ),
                 )[0].target_id
             else:
                 nxt = self._bb
-            self._stack.append(CallFrame(function_name=self._fn, return_bb=nxt, caller_bb=self._bb))
+            self._stack.append(
+                CallFrame(function_name=self._fn, return_bb=nxt, caller_bb=self._bb)
+            )
             self._fn = callee
             self._bb = self._grammar.entry_bb_id(callee)
             info["transition"] = "call"
@@ -198,7 +252,13 @@ class InterproceduralCFGWalkEnv(gym.Env):
         else:
             if not self._stack:
                 obs = self._observation()
-                return obs, -1.0, True, False, {"action_mask": mask, "reason": "invalid_action"}
+                return (
+                    obs,
+                    -1.0,
+                    True,
+                    False,
+                    {"action_mask": mask, "reason": "invalid_action"},
+                )
             fr = self._stack.pop()
             self._fn = fr.function_name
             self._bb = fr.return_bb

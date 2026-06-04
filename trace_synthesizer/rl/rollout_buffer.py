@@ -99,8 +99,12 @@ class RolloutBuffer:
             actions=torch.tensor(self.actions, dtype=torch.long, device=device),
             rewards=torch.tensor(self.rewards, dtype=torch.float32, device=device),
             dones=torch.tensor(self.dones, dtype=torch.float32, device=device),
-            old_log_probs=torch.tensor(self.old_log_probs, dtype=torch.float32, device=device),
-            old_values=torch.tensor(self.old_values, dtype=torch.float32, device=device),
+            old_log_probs=torch.tensor(
+                self.old_log_probs, dtype=torch.float32, device=device
+            ),
+            old_values=torch.tensor(
+                self.old_values, dtype=torch.float32, device=device
+            ),
             manager_z=mgr_z,
             old_manager_log_probs=None,
             manager_fired=mf,

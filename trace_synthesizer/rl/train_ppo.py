@@ -21,11 +21,14 @@ from trace_synthesizer.agents.checkpoint import (
     ppo_hier_meta_for_save,
     save_policy_checkpoint,
 )
-from trace_synthesizer.agents.ppo_policies import FlatActorCritic, HierarchicalActorCritic
+from trace_synthesizer.agents.ppo_policies import (
+    FlatActorCritic,
+    HierarchicalActorCritic,
+)
 from trace_synthesizer.core.grammar import CfgProgram, ordered_successors
 from trace_synthesizer.env.cfg_reward_wrapper import CFGWalkRewardWrapper
-from trace_synthesizer.env.interproc_walk_env import InterproceduralCFGWalkEnv
 from trace_synthesizer.env.feature_window_wrapper import FeatureWindowWrapper
+from trace_synthesizer.env.interproc_walk_env import InterproceduralCFGWalkEnv
 from trace_synthesizer.metrics.loaders import (
     load_path_from_compressed_trace,
     load_path_from_intra_trace_json,
@@ -136,19 +139,25 @@ def run_bc_pretrain(
     entry = int(grammar.entry_bb_id(str(args.func)))
     transitions: list[tuple[np.ndarray, np.ndarray, int, float]] = []
 
-    from trace_synthesizer.agents.cfg_supervision import prefix_features_along_bb_path, supervision_pairs_from_bb_path, action_mask_rows_for_bb_prefix
+    from trace_synthesizer.agents.cfg_supervision import (
+        action_mask_rows_for_bb_prefix,
+        prefix_features_along_bb_path,
+        supervision_pairs_from_bb_path,
+    )
 
     for path in paths:
         if not path or int(path[0]) != entry:
             continue
         try:
             feats = prefix_features_along_bb_path(env, grammar, str(args.func), path)
-            masks = action_mask_rows_for_bb_prefix(grammar, str(args.func), path[:-1], max_actions=policy_max_actions)
+            masks = action_mask_rows_for_bb_prefix(
+                grammar, str(args.func), path[:-1], max_actions=policy_max_actions
+            )
             pairs = supervision_pairs_from_bb_path(grammar, str(args.func), path)
-            
+
             if len(pairs) != len(path) - 1:
                 continue
-                
+
             for i in range(len(pairs)):
                 u, ai = pairs[i]
                 v = int(path[i + 1])
@@ -201,15 +210,17 @@ def run_bc_pretrain(
                 else:
                     la = None
                 if la is not None:
-                    loss = loss + float(bc_aux_coef) * F.binary_cross_entropy_with_logits(
-                        la, aux_tgt
-                    )
+                    loss = loss + float(
+                        bc_aux_coef
+                    ) * F.binary_cross_entropy_with_logits(la, aux_tgt)
             loss.backward()
             nn.utils.clip_grad_norm_(policy.parameters(), float(max_grad_norm))
             optimizer.step()
 
 
-def _apply_loop_proposal_reward_defaults(args: Any, loop_profile: dict[str, Any] | None) -> None:
+def _apply_loop_proposal_reward_defaults(
+    args: Any, loop_profile: dict[str, Any] | None
+) -> None:
     """
     When a ``loop_profile`` is present, enable proposal-aligned shaping by default:
 
@@ -267,9 +278,7 @@ def run_train_ppo(args: Any) -> dict[str, Any]:
         terminal_kl_scale=float(args.terminal_kl_scale),
         loop_timing_scale=float(getattr(args, "loop_timing_scale", 0.0)),
         ref_edge_log_scale=float(getattr(args, "ref_edge_log_scale", 0.0)),
-        short_path_penalty_scale=float(
-            getattr(args, "short_path_penalty_scale", 0.0)
-        ),
+        short_path_penalty_scale=float(getattr(args, "short_path_penalty_scale", 0.0)),
     )
     env = CFGWalkRewardWrapper(
         base_env,
@@ -279,7 +288,7 @@ def run_train_ppo(args: Any) -> dict[str, Any]:
         ref_bb_hist=ref_hist,
         loop_profile=loop_profile,
     )
-    
+
     window_back = int(getattr(args, "window_back", 1))
     env = FeatureWindowWrapper(env, window_back=window_back)
 
@@ -287,7 +296,9 @@ def run_train_ppo(args: Any) -> dict[str, Any]:
     max_actions = int(env.action_space.n)
     init_ckpt = getattr(args, "init_checkpoint", None)
     if init_ckpt is not None:
-        loaded, meta = load_policy_checkpoint(Path(init_ckpt), device=device, strict=True)
+        loaded, meta = load_policy_checkpoint(
+            Path(init_ckpt), device=device, strict=True
+        )
         if args.hierarchical and not isinstance(loaded, HierarchicalActorCritic):
             raise ValueError(
                 f"--hierarchical requested but init checkpoint is {type(loaded)}"
@@ -520,21 +531,19 @@ def run_train_ppo(args: Any) -> dict[str, Any]:
                 "repeat_bb_penalty_scale": float(
                     getattr(args, "repeat_bb_penalty_scale", 0.0)
                 ),
-                "truncation_penalty": float(
-                    getattr(args, "truncation_penalty", 0.0)
-                ),
+                "truncation_penalty": float(getattr(args, "truncation_penalty", 0.0)),
                 "terminal_kl_scale": float(args.terminal_kl_scale),
                 "loop_timing_scale": float(getattr(args, "loop_timing_scale", 0.0)),
-                "ref_edge_log_scale": float(
-                    getattr(args, "ref_edge_log_scale", 0.0)
-                ),
+                "ref_edge_log_scale": float(getattr(args, "ref_edge_log_scale", 0.0)),
                 "short_path_penalty_scale": float(
                     getattr(args, "short_path_penalty_scale", 0.0)
                 ),
             },
             "algo": "ppo",
             "loop_profile": (
-                str(Path(lp_path).expanduser().resolve()) if lp_path is not None else None
+                str(Path(lp_path).expanduser().resolve())
+                if lp_path is not None
+                else None
             ),
         }
     )

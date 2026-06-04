@@ -138,7 +138,9 @@ def prefix_features_along_bb_path(
 GLOBAL_CFG_SUMMARY_DIM = 0
 
 
-def global_cfg_summary_vector(grammar: CfgProgram, function_name: str, target_dim: int | None = None) -> np.ndarray:
+def global_cfg_summary_vector(
+    grammar: CfgProgram, function_name: str, target_dim: int | None = None
+) -> np.ndarray:
     """Fixed-size summary of the whole function CFG from static ``BlockFeatures`` only."""
     fn = grammar.function(function_name)
     mats = [

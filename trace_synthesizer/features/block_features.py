@@ -78,19 +78,19 @@ class BlockFeatures:
             is_loop_latch=1.0 if block.is_loop_latch else 0.0,
             is_loop_exiting=1.0 if block.is_loop_exiting else 0.0,
             back_edge_in_count=float(block.back_edge_in_count),
-            terminator_conditional=1.0
-            if block.terminator_kind == "conditional_branch"
-            else 0.0,
-            terminator_unconditional=1.0
-            if block.terminator_kind == "unconditional_branch"
-            else 0.0,
+            terminator_conditional=(
+                1.0 if block.terminator_kind == "conditional_branch" else 0.0
+            ),
+            terminator_unconditional=(
+                1.0 if block.terminator_kind == "unconditional_branch" else 0.0
+            ),
             terminator_return=1.0 if block.terminator_kind == "return" else 0.0,
-            terminator_indirect=1.0
-            if block.terminator_kind == "indirect_branch"
-            else 0.0,
-            terminator_other=1.0
-            if block.terminator_kind in {"other", "branch", "call"}
-            else 0.0,
+            terminator_indirect=(
+                1.0 if block.terminator_kind == "indirect_branch" else 0.0
+            ),
+            terminator_other=(
+                1.0 if block.terminator_kind in {"other", "branch", "call"} else 0.0
+            ),
             embedding=(
                 torch.tensor(list(block.ir2vec_embedding), dtype=torch.float32)
                 if block.ir2vec_embedding is not None

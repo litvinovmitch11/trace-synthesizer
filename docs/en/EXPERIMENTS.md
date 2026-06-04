@@ -1,197 +1,139 @@
-# Trace Synthesizer: Experiments and Validation Report
+# Experiments & Results
 
-## Overview
-This document summarizes the validation experiments conducted on the TraceSynthesizer framework. The goal of these experiments was to demonstrate that the framework successfully captures semantic logic, conditional dependencies, and cyclical patterns (loops) natively represented in the target `C/C++` code, aligning precisely with the original proposal's promises.
+Measured results for the six benchmark pipelines. Every number below was
+produced by the committed `scripts/run_*_exp.py` drivers (`make exp-*`) on CPU
+with `seed 42`, IR2Vec embeddings enabled, and the loop-profile reward shaping
+described in [OVERVIEW](OVERVIEW.md). To regenerate them see
+[REPRODUCTION](REPRODUCTION.md).
 
-In the course of this validation, we targeted two complex control flow patterns:
-1. **The Diamond Problem (`cpp_diamond`)**: A loop containing a conditional where a subsequent branch depends on the outcome of the earlier branch.
-2. **State Machine Trigger (`cpp_trigger`)**: A loop tracking an internal variable (`state`), requiring the agent to understand temporal relationships across steps and loops.
+> Honesty note: these are the **reproducible** numbers from the current
+> repository. Where they differ from a table in the thesis, the difference is
+> called out explicitly. The recurring theme — **Flat PPO is the strongest
+> zero-shot transfer method, HRL is strongest in-domain** — holds across every
+> experiment.
 
-## Baseline Bug Discovery and Fix
-Initially, the synthetic metrics were severely degraded. The models were unable to effectively visit blocks and completely failed to mimic realistic loop behaviors.
+## Metrics
+- **`block_visit_kl`** — KL of basic-block visit histograms (Laplace-smoothed on the union support). Lower is better.
+- **`edge_transition_kl`** — same over consecutive `(BBᵢ, BBᵢ₊₁)` pairs. Lower is better.
+- **`hot_path_ngram_overlap`** — mean recall@64 of the top BB n-grams for n ∈ {2,3,4}. Higher is better (1.0 = the reference's hot paths are all reproduced).
 
-**Root cause**: We identified that the dense PGO log-scale shaping reward `transition_pgo_log_reward` had default parameters that heavily penalized each sequence step (`pgo_log_scale=0.5`). Because $PGO\_prob \le 1.0$, the natural log yielded a negative reward for every single step. This created a typical reinforcement learning "suicide trap": the agent preferred to immediately terminate the sequence rather than accumulate negative reward traversing loops.
-
-**Fix implemented**: We updated the training configurations to disable the naive `pgo_log_scale` in favor of more robust global constraints:
-- `loop-timing-scale`: Bonuses for maintaining the correct average execution frequencies of loop headers.
-- `terminal-kl-scale`: Significant terminal penalties/bonuses based on KL-divergence of block histograms.
-
-These changes were critical to transforming the flat and hierarchical RL agents from broken implementations into highly accurate trace synthesizers.
-
----
-
-## Experiment 1: The Diamond Problem (`cpp_diamond`)
-**Objective**: Determine if the model learns implicit dependencies (`if-else` path selection based on an earlier state definition).
-
-**Methodology**:
-We synthesized traces using:
-- **Baseline (Probabilistic Generator PGO)**
-- **LSTM (Behavioral Cloning)**
-- **PPO Flat**
-- **PPO Hierarchical (FuN/h-DQN inspired)**
-
-**Results**:
-- **Before the Reward Fix**: The HRL model halted after 3 steps (`mean_length: 3.0`), achieving a `hot_path_ngram_overlap` of 0.09 and a massive `block_visit_kl` of ~16.8.
-- **After the Reward Fix (Hierarchical PPO)**: The model produced trace runs matching the true length (~483 blocks average length). The divergence metrics dropped drastically (`block_visit_kl: 0.046`), and the `hot_path_ngram_overlap` skyrocketed to **1.0**.
-
-The Hierarchical RL successfully learned the implicit dependency (the "diamond") perfectly reproducing the empirical control-flow variations.
+Modes: **in-domain** (train and evaluate on the same CFG) vs **zero-shot**
+(train on a base CFG, evaluate on a mutated/other CFG never instrumented during
+training).
 
 ---
 
-## Experiment 2: State Machine / Trigger Pattern (`cpp_trigger`)
-**Objective**: Evaluate sequence generation capabilities over a complex temporal context (a variable alternating between three discrete states, dynamically controlling branch flows on different modulo triggers).
+## 1. State machine — `cpp_trigger` (in-domain) · `make exp-trigger`
+A loop whose branch depends on an internal `state` variable updated across
+iterations — a Markov walk cannot track it.
 
-**Run Configuration**:
-- All algorithms tracked per the proposal (`PGO`, `LSTM`, `Flat PPO`, `Hierarchical PPO`).
-- Integrated TensorBoard logging for RL algorithms (`--tb-logdir`).
-- Detailed comparison metrics exported.
+| Method | block_visit_kl | hot_path_ngram_overlap |
+|---|---|---|
+| Random PGO | 3.12 | 0.74 |
+| LSTM (BC) | 5.54 | 0.32 |
+| Flat PPO | 0.41 | 0.99 |
+| **Hierarchical PPO** | **0.045** | **1.00** |
 
-**Results**:
-- **Baseline PGO**: `block_visit_kl`: 3.12, `hot_path_ngram_overlap`: 0.74 (Fails to track internal state dependencies correctly).
-- **LSTM (Pretrain)**: `block_visit_kl`: 5.60, `hot_path_ngram_overlap`: 0.31 (Suffers from compounding errors during auto-regressive generation without environment interaction).
-- **PPO Flat**: `block_visit_kl`: 1.35, `hot_path_ngram_overlap`: 0.80 (Struggles to abstract the state machine context into a persistent memory across long sequences).
-- **PPO Hierarchical**: `block_visit_kl`: **0.098**, `hot_path_ngram_overlap`: **1.0** (Almost perfectly mimics the complex conditional and state-driven branching).
+PGO follows hot edges locally but cannot bind the state-machine phases; LSTM
+drifts auto-regressively; HRL reproduces the reference almost exactly.
 
-## Experiment 3: Zero-Shot Transfer to Mutated CFG (`cpp_mutation`)
-**Objective**: The ultimate goal of this framework, as discussed with the MLGO team, is to support Register Allocation (RegAlloc) reinforcement learning. RegAlloc training introduces passes (like block placement, spills/fills) that mutate the CFG. We cannot use DynamoRIO on the mutated binary at every training step because it is too slow.
+## 2. Context dependency — `cpp_diamond` (in-domain) · `make exp-diamond`
+A late branch depends on an earlier branch in the same run ("diamond").
 
-Can we train a model on the **baseline trace** of a program, and then perform **zero-shot trace synthesis** on the mutated CFG?
+| Method | hot_path_ngram_overlap |
+|---|---|
+| Flat PPO (`--window-back 8`) | 0.09 |
+| Flat PPO (`--window-back 32`) | 0.98 |
+| **Hierarchical PPO** | **1.00** |
 
-**Methodology**:
-1. We created `trigger_base.cpp` and collected its trace.
-2. We trained the algorithms (LSTM, Flat PPO, HRL PPO) on this baseline CFG and trace.
-3. We created `trigger_mutated.cpp` which inserts multiple dummy memory operations and an initial `if` to simulate RegAlloc spills and block placement, fundamentally changing the underlying basic block IDs and CFG edge representations.
-4. We performed inference on the mutated CFG using the trained models **without providing them the mutated trace**.
-5. We evaluated the synthesized trace against the hidden ground truth trace of the mutated binary. We also included a PGO-only random walk baseline.
+HRL solves the diamond via its mode abstraction. Flat fails **only** because the
+two branches are farther apart than the K=8 window; widening the window to 32
+recovers 0.98 — i.e. Flat's weakness here is memory length, not capability.
 
-**Results**:
-- **Baseline PGO on Mutated CFG**: `block_visit_kl`: 0.328, `hot_path_ngram_overlap`: 0.991
-- **LSTM Zero-Shot**: `block_visit_kl`: 3.643, `hot_path_ngram_overlap`: 0.489
-- **Flat PPO Zero-Shot**: `block_visit_kl`: 2.357, `hot_path_ngram_overlap`: 0.732
-- **HRL Zero-Shot on Mutated CFG**: `block_visit_kl`: **0.085**, `hot_path_ngram_overlap`: **1.0**
+## 3. Zero-shot CFG mutation — `cpp_mutation` · `make exp-mutation`
+Base = state machine; mutated = inserted dummy/spill blocks + an extra entry
+`if` (simulates RegAlloc passes). Train on base, infer on mutated.
 
-The HRL model successfully transferred its learned semantic knowledge to the mutated CFG, perfectly reconstructing the execution path without ever seeing a DynamoRIO trace of the mutated binary. LSTM and Flat PPO struggled to generalize over the shifted topologies.
+| Method | block_visit_kl | hot_path_ngram_overlap |
+|---|---|---|
+| Oracle PGO (target profile) | 0.33 | 0.99 |
+| LSTM zero-shot | 9.26 | 0.21 |
+| **Flat PPO zero-shot** | **0.23** | **0.99** |
+| HRL zero-shot | 17.40 | 0.07 |
 
----
+**Flat PPO is the winner here.** HRL trains correctly on the base graph
+(~1280-step episodes) but on the mutated entry takes a wrong early edge and
+exits in ~5 steps — confirmed across `--window-back {8,16}` and
+`--action-select {sample,argmax}`. *(The thesis Table 7.5 reports HRL=1.0; that
+is not reproducible — Flat PPO is the reproducible zero-shot method, consistent
+with experiments 4–6 below.)*
 
-## Experiment 4: Complex Algorithm Zero-Shot Transfer (`cpp_sorting_mutation`)
-**Objective**: Determine if the Zero-Shot Transfer pipeline can successfully reproduce the semantic trace of a standard sorting algorithm (Bubble Sort), which contains multi-level nested loops and conditional data-dependent branching, across a CFG mutation.
+## 4. Zero-shot nested loops — `cpp_sorting_mutation` · `make exp-sorting`
+Bubble sort; mutation adds dummy branches and `volatile` spill slots inside the
+loops.
 
-**Methodology**:
-We repeated the zero-shot transfer workflow on `benchmarks/local/cpp_sorting_mutation`, which sorts a reversed array of integers. We trained the foundation models on `sort_base.cpp` and synthesized traces on `sort_mutated.cpp`, which introduces dummy branching and nested `volatile` spill slots that restructure the CFG inside the sorting loops.
+| Method | block_visit_kl | hot_path_ngram_overlap |
+|---|---|---|
+| Oracle PGO | 1.06 | 0.98 |
+| LSTM zero-shot | 0.56 | 0.42 |
+| **Flat PPO zero-shot** | **0.03** | **1.00** |
+| HRL zero-shot | 0.02 | 0.88 |
 
-**Results**:
-- **Baseline PGO**: `block_visit_kl`: 2.429, `hot_path_ngram_overlap`: 0.981
-- **LSTM Zero-Shot**: `block_visit_kl`: 0.558, `hot_path_ngram_overlap`: 0.415
-- **Flat PPO Zero-Shot**: `block_visit_kl`: 0.553, `hot_path_ngram_overlap`: 1.0
-- **HRL PPO Zero-Shot**: `block_visit_kl`: 0.813, `hot_path_ngram_overlap`: 0.882
+Flat PPO (window + IR2Vec) reproduces the loops perfectly; HRL's fixed-rhythm
+manager is slightly less aligned with nested loops. Matches the thesis Table 7.6
+overlaps exactly.
 
-Both Flat PPO and HRL PPO robustly outperformed the LSTM sequential baseline and the PGO baseline when reconstructing the semantic execution pattern over the mutated CFG. The RL policies learn high-level loop behaviors, rather than brittle sequential block correlations.
+## 5. Extreme mutations — `cpp_smart_mutation` · `make exp-smart`
+Aggressive, compiler-like rewrites of a state machine: **loop peeling**,
+**branch inversion** (swap true/false edges), **hot-block splitting**.
 
----
+| Method | block_visit_kl | hot_path_ngram_overlap |
+|---|---|---|
+| Oracle PGO (target profile) | 0.63 | 1.00 |
+| LSTM zero-shot | 2.15 | 0.63 |
+| Flat PPO zero-shot | 19.73 | 0.00 |
+| HRL zero-shot | 19.73 | 0.00 |
 
-## Experiment 5: Smart Compiler Mutations (`cpp_smart_mutation`)
-**Objective**: To explore the limits of Zero-Shot transfer under extreme CFG alterations. If a compiler pass significantly alters the CFG topology (loop peeling, branch inversion, and hot-path block splitting), can the agent still synthesize the trace without seeing the new CFG's DynamoRIO trace?
+This is the breaking point for the learned policies: branch inversion swaps the
+edge indices, and after loop peeling the trained policies pick the wrong early
+edge and collapse. Only the (cheating) Oracle PGO and the LSTM retain signal.
+*(The thesis Table 7.8 reports Flat 0.795 with IR2Vec; in the current pipeline
+Flat collapses to 0.0 — only the LSTM result, 0.63, reproduces. This benchmark
+marks the limit of zero-shot transfer and motivates the event-based manager and
+richer semantic features listed as future work.)*
 
-**Methodology**:
-We crafted a `smart_mutated.cpp` that applies severe, compiler-like transformations to a basic state machine (`smart_base.cpp`):
-1. **Loop Peeling**: The first iteration of the loop is extracted and placed behind an initial conditional check.
-2. **Branch Inversion**: Logical conditions like `if (state == 0)` were inverted to `if (state != 0)`, fundamentally swapping the True/False edge mappings in LLVM IR.
-3. **Block Splitting**: A sequence of instructions inside the hot path was broken across two basic blocks via a dummy condition.
+## 6. Cross-optimization O0→O3 — `cpp_opt_levels` · `make exp-opt`
+One source, compiled `-O0…-O3` (34 / 20 / 55 / 59 basic blocks). Train on `-O0`
+only; evaluate zero-shot on every level. `hot_path_ngram_overlap`:
 
-We trained the foundation models on the base CFG and executed zero-shot rollouts on the mutated CFG.
+| Method | -O0 | -O1 | -O2 | -O3 |
+|---|---|---|---|---|
+| Random PGO (target profile) | 1.00 | 0.98 | 0.94 | 0.94 |
+| LSTM | 0.08 | 0.04 | 0.02 | 0.02 |
+| **Flat PPO** | **1.00** | **0.91** | **0.89** | **0.89** |
+| HRL PPO | 1.00 | 0.64 | 0.68 | 0.68 |
 
-**Results (with Semantic Embeddings Enabled)**:
-- **Baseline PGO on Mutated CFG**: `block_visit_kl`: 0.628, `hot_path_ngram_overlap`: 1.0 (Note: PGO "cheats" because it extracts edge probabilities from the mutated binary's profiling data, so it isn't truly zero-shot).
-- **LSTM Zero-Shot**: `block_visit_kl`: 19.734, `hot_path_ngram_overlap`: 0.0
-- **Flat PPO Zero-Shot**: `block_visit_kl`: 19.734, `hot_path_ngram_overlap`: 0.0
-- **HRL PPO Zero-Shot**: `block_visit_kl`: **16.733**, `hot_path_ngram_overlap`: **0.256**
-
-**Analysis of the Outcome**:
-This experiment proves a critical scientific finding for the MLGO team: **Zero-shot transfer across severe compiler mutations (loop peeling, branch inversions) strictly requires semantic embeddings (like IR2Vec/MIR2Vec) to prevent state aliasing.**
-
-Initially, without embeddings, all models completely failed (`overlap: 0.0`). The mutated graph inverted a branch, swapping the True/False edges. The models, relying purely on scalar block features (instruction counts, loop depth), experienced severe MDP aliasing—the structurally identical block now required picking the opposite edge index, leading to immediate trace termination.
-
-By injecting a mock 32-dimensional semantic embedding (acting as a unique signature representing the exact memory access semantics of the block), the HRL model was able to break the structural aliasing. The `hot_path_ngram_overlap` recovered from **0.0 to 0.256**. While not perfect (since the loop structure itself was peeled and boundaries shifted), the semantic embeddings enabled the Hierarchical RL agent to correctly navigate the inverted branches that completely destroyed the Flat PPO and LSTM agents.
-
-**Conclusion for MLGO**: While the RL pipeline successfully transfers across minor structural changes (like spill insertions) using only scalar features, surviving major compiler mutations (loop unrolling, branch inversions) strictly requires the integration of rich semantic block embeddings (IR2Vec/MIR2Vec) into the observation space to prevent MDP aliasing.
-
----
-
-## Experiment 6: Final Integrated Architecture (Memory, Embeddings, Interproc, SFT)
-**Objective**: To evaluate the fully integrated reinforcement learning architecture, which combines all the advanced techniques theorized to solve the trace synthesis problem for MLGO.
-
-**Methodology**:
-We integrated four major architectural improvements:
-1. **Recurrent Memory (Feature Windowing)**: An observation wrapper that stacks the last 8 visited blocks, allowing Flat PPO and LSTM agents to "remember" state transitions without relying strictly on the HRL manager.
-2. **Real IR2Vec Embeddings**: Replaced mock embeddings with actual 75-dimensional `llvm-ir2vec` semantic vectors, concatenated to the block observation features.
-3. **Interprocedural Call Stack Awareness**: Expanded the environment step to handle Call/Return transitions. The current block features are now concatenated with the semantic features of the *calling* block and the call stack depth, preventing aliasing during cross-function jumps.
-4. **Behavioral Cloning (SFT -> RLHF)**: Initialized the RL models using Supervised Fine-Tuning (SFT) over 10 epochs on the reference paths before beginning PPO exploration.
-
-We re-evaluated the hardest experiments using this final architecture.
-
-**Results**:
-- **Diamond (Context Dependency)**:
-  - Flat PPO: `hot_path_ngram_overlap`: 0.09
-  - HRL PPO: `hot_path_ngram_overlap`: **1.00**
-  *(HRL flawlessly resolves dynamic context dependency).*
-- **Sorting Mutation (Realistic Complex Loops)**:
-  - LSTM: `hot_path_ngram_overlap`: 0.415
-  - Flat PPO: `hot_path_ngram_overlap`: **0.981**
-  - HRL PPO: `hot_path_ngram_overlap`: 0.882
-  *(Flat PPO with Recurrent Memory beats LSTM for pure sequential logic synthesis).*
-- **Smart Compiler Mutations (Loop Peeling, Branch Inversion)**:
-  - LSTM: `hot_path_ngram_overlap`: 0.626
-  - Flat PPO: `hot_path_ngram_overlap`: **0.795** (Previously 0.0)
-  - HRL PPO: `hot_path_ngram_overlap`: 0.00
-  *(HRL's rigid temporal manager ticking fails against extreme loop unrolling, but Flat PPO combined with Recurrent Memory and IR2Vec successfully bridges the structural gap).*
-
-**Conclusion**:
-The addition of Real IR2Vec embeddings and Recurrent Memory (Feature Windows) unlocked true Zero-Shot generalization. Flat PPO with Recurrent Memory proved incredibly robust against severe structural mutations, while HRL remains unmatched at resolving contextual dependencies (like the diamond problem).
+Trained on 34 O0 blocks, Flat PPO keeps ~0.89 overlap on the 59-block O3 graph.
+LSTM overfits the O0 topology and fails elsewhere. PGO is an upper-bound
+Markov baseline that reads the *target* graph's probabilities (not a transferred
+policy). Direction matches the thesis Table 7.10 (Flat is the strongest learned
+transfer); absolute values differ slightly run-to-run.
 
 ---
 
-## Experiment 7: Cross-Optimization Zero-Shot (O0 -> O3)
-**Objective**: Evaluate the ability of models to synthesize traces for a program compiled with different optimization levels (`-O0`, `-O1`, `-O2`, `-O3`), when trained exclusively on the unoptimized version (`-O0`). 
+## Summary
 
-**Artifact Validation**:
-Analysis of the `complex_algorithm` CFG confirms radical topological changes (not just dummy blocks) across optimization levels:
-*   **-O0**: 34 basic blocks
-*   **-O1**: 20 basic blocks (dead code elimination, branch folding)
-*   **-O2**: 55 basic blocks (vectorization and loop unrolling begins)
-*   **-O3**: 59 basic blocks (aggressive loop unrolling)
+| Scenario | Mode | Best learned method | Key number |
+|---|---|---|---|
+| trigger | in-domain | HRL | overlap 1.00, KL 0.045 |
+| diamond | in-domain | HRL | overlap 1.00 |
+| mutation | zero-shot | **Flat PPO** | overlap 0.99, KL 0.23 |
+| sorting | zero-shot | **Flat PPO** | overlap 1.00 |
+| smart | zero-shot | — (only PGO/LSTM survive) | LSTM overlap 0.63 |
+| cross-opt O0→O3 | zero-shot | **Flat PPO** | O3 overlap 0.89 |
 
-The source code contains a strict State Machine that introduces deep contextual dependency. Random PGO (a memoryless Markov model) can yield high formal metrics on trivial inner loops (due to "cheating" by using target edge probabilities), but it fundamentally fails to reproduce strict temporal correlation between branches (as proven in Experiment 2).
-
-**Methodology**:
-1. Compiled the `complex_opt.cpp` algorithm from `-O0` to `-O3`.
-2. Extracted CFGs, IR2Vec, and Ground Truth traces for all 4 binaries.
-3. Trained models *exclusively* on the `-O0` version.
-4. Performed Zero-Shot trace synthesis on the graphs for all optimization levels.
-
-**Results (Train on O0 -> Inference on O0, O1, O2, O3)**:
-- **Baseline Random PGO**: `hot_path_ngram_overlap` stays around **0.96-0.97** formally, because PGO extracts target probabilities directly from the graph. However, at the State Machine level of contextual transitions, it degenerates into a random walk, completely failing the state-binding task (as clearly shown by its drop to 0.093 in Experiment 2).
-- **LSTM (Behavioral Cloning)**: Completely failed (`overlap < 0.1`) due to severe overfitting to the initial graph's topology.
-- **Flat PPO (with Feature Window + IR2Vec)**: 
-  - On `-O0` (seen): **0.970**
-  - On `-O1` (zero-shot): **0.946**
-  - On `-O2` (zero-shot): **0.860**
-  - On `-O3` (zero-shot): **0.864**
-- **HRL PPO**:
-  - On `-O0` (seen): 0.607
-  - On `-O1` (zero-shot): 0.622
-  - On `-O2` (zero-shot): 0.674
-  - On `-O3` (zero-shot): 0.729
-
-**Conclusion**:
-The experiment proves the viability and superiority of RL models over Random PGO in understanding graph semantics. Trained on just 34 blocks (O0), **Flat PPO** transfers its learned semantic patterns to 59 blocks (O3) with 86.4% overlap. While PGO blindly follows static probabilities (cheating in Zero-Shot), RL agents use Feature Windows and IR2Vec to autonomously navigate through heavily mutated CFGs.
-
----
-
-## Conclusion & Final State
-- The TraceSynthesizer fully implements the solutions discussed in the MLGO proposal.
-- **Hierarchical RL (HRL)** handles higher-level contextual dependencies effectively.
-- **Flat PPO with Recurrent Memory and IR2Vec** demonstrates remarkable zero-shot robustness against extreme compiler mutations (branch inversion, loop peeling).
-- The pipeline cleanly circumvents the Data Leakage dilemma by pre-training (SFT+RL) on the baseline CFG, and adapting to the mutated CFGs inside the RegAlloc loop purely zero-shot.
-- Successfully proved the capability to generalize across different LLVM optimization levels (O0 -> O3) without retraining.
-- The repository has been pruned of stubs and legacy scripts; all remaining `scripts/run_*_exp.py` pipelines serve as fully verified, reproducible benchmarks for LLVM trace synthesis.
+**Takeaways**
+- **Hierarchical PPO** is best when there is an explicit phase/state structure on a *fixed* graph (trigger, diamond).
+- **Flat PPO** (feature window + IR2Vec) is the robust **zero-shot transfer** method (mutation, sorting, cross-opt).
+- Both learned policies still **collapse under extreme structural mutation** (branch inversion + loop peeling); closing that gap (event-based manager, richer semantic features) is future work.
+- Synthetic rollout is orders of magnitude faster than re-running DynamoRIO at inference (`metrics-bench-speed`).

@@ -1,9 +1,19 @@
-.vscode
-build*
-venv
-.venv
-__pycache__
-output
-analysis/artifacts
-experiments/artifacts
-out
+# Editor / IDE
+.vscode/
+
+# Build output (cmake dir + per-benchmark build_base/build_mutated/build).
+# Trailing slash => only directories, so scripts/build_*.py stay tracked.
+build*/
+
+# Python envs / caches
+venv*/
+.venv*/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Generated experiment + corpus artifacts
+output*/
+out/
+analysis/artifacts/
+experiments/artifacts/

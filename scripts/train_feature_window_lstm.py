@@ -157,7 +157,9 @@ def main() -> None:
         help="JSONL: precomputed context_features + action_mask + target + context_meta "
         "(or legacy cfg + func + sequence)",
     )
-    p.add_argument("--func-filter", default=None, help="If set, only rows with this func")
+    p.add_argument(
+        "--func-filter", default=None, help="If set, only rows with this func"
+    )
     p.add_argument("--out-stem", type=Path, required=True)
     p.add_argument(
         "--window-back",
@@ -274,7 +276,9 @@ def main() -> None:
             func = str(raw.get("func") or raw.get("function_name") or "")
             if args.func_filter is not None and func != args.func_filter:
                 continue
-            x = torch.tensor(raw["context_features"], dtype=torch.float32, device=device)
+            x = torch.tensor(
+                raw["context_features"], dtype=torch.float32, device=device
+            )
             m = torch.tensor(raw["action_mask"], dtype=torch.bool, device=device)
             y = torch.tensor(raw["target"], dtype=torch.long, device=device)
             if x.shape[0] < 1 or x.shape[0] != m.shape[0] or y.shape[0] != x.shape[0]:
@@ -292,7 +296,9 @@ def main() -> None:
             cfg_p = Path(raw["cfg"]).expanduser().resolve()
             seq = raw["sequence"]
             grammar = CfgProgram.from_cfg_json(cfg_p)
-            env = InterproceduralCFGWalkEnv(grammar, func, max_steps=50_000, seed=args.seed, device=device)
+            env = InterproceduralCFGWalkEnv(
+                grammar, func, max_steps=50_000, seed=args.seed, device=device
+            )
             bb_path = _bb_path_from_intra(seq, func)
             if not bb_path:
                 skipped += 1
@@ -344,9 +350,7 @@ def main() -> None:
         epoch_loss = 0.0
         for j in indices:
             wins, masks, targets = prepared[j]
-            logits, _ = policy(
-                wins.unsqueeze(0), action_mask=masks.unsqueeze(0)
-            )
+            logits, _ = policy(wins.unsqueeze(0), action_mask=masks.unsqueeze(0))
             loss = F.cross_entropy(logits[0], targets)
             opt.zero_grad()
             loss.backward()

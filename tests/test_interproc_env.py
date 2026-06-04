@@ -14,7 +14,13 @@ def test_interproc_call_return(tmp_path: Path) -> None:
         {
             "function_name": "callee",
             "blocks": [
-                {"id": 10, "name": "callee.entry", "is_entry": True, "instr_count": 1, "successors": []}
+                {
+                    "id": 10,
+                    "name": "callee.entry",
+                    "is_entry": True,
+                    "instr_count": 1,
+                    "successors": [],
+                }
             ],
         },
         {
@@ -27,9 +33,17 @@ def test_interproc_call_return(tmp_path: Path) -> None:
                     "instr_count": 1,
                     "has_call": True,
                     "call_target": "callee",
-                    "successors": [{"target_id": 1, "prob": 1.0, "is_fallthrough": True}],
+                    "successors": [
+                        {"target_id": 1, "prob": 1.0, "is_fallthrough": True}
+                    ],
                 },
-                {"id": 1, "name": "ret", "is_entry": False, "instr_count": 1, "successors": []},
+                {
+                    "id": 1,
+                    "name": "ret",
+                    "is_entry": False,
+                    "instr_count": 1,
+                    "successors": [],
+                },
             ],
         },
     ]

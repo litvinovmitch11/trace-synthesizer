@@ -99,7 +99,9 @@ class CFGWalkRewardWrapper(gym.Wrapper):
         )
         return np.concatenate([base, np.array([rel, mn, ex], dtype=np.float32)], axis=0)
 
-    def _pad_features(self, obs: dict[str, Any], current_bb: int) -> dict[str, np.ndarray]:
+    def _pad_features(
+        self, obs: dict[str, Any], current_bb: int
+    ) -> dict[str, np.ndarray]:
         base_f = np.asarray(obs["features"], dtype=np.float32).reshape(-1)
         if base_f.shape[0] != self._base_feat_dim:
             raise ValueError(
