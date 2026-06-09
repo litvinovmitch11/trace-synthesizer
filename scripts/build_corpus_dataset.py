@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""EXPERIMENTAL: build a multi-program corpus from cBench/ctuning programs.
+"""Build a multi-program corpus from cBench/ctuning programs.
 
 For each curated program (benchmarks/external/ctuning_curated.json) this:
   1. compiles its (multi-file, C) sources with PGO instrumentation,

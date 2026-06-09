@@ -1,4 +1,4 @@
-"""Experiment 7.2.3 (Table 7.3): cpp_trigger state-machine, in-domain.
+"""cpp_trigger state-machine, in-domain.
 
 Trains and evaluates all four generator families on the same trigger CFG
 (Random PGO, LSTM-BC, Flat PPO, Hierarchical PPO) and reports
