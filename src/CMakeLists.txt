@@ -1,0 +1,2 @@
+add_subdirectory(CFGDumper)
+add_subdirectory(InstrTracer)

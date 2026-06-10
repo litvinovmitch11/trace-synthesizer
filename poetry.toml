@@ -1,0 +1,4 @@
+# Keep the project venv inside the repo so `poetry install` matches `.venv/bin/python`
+# (avoids "I used poetry install but my activated venv/ has no matplotlib").
+[virtualenvs]
+in-project = true

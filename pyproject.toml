@@ -1,0 +1,46 @@
+[tool.poetry]
+name = "trace-synthesizer"
+version = "0.1.0"
+description = "A research framework for collecting, analyzing, and synthesizing execution traces using machine learning."
+authors = ["Michael Litvinov <litvinovmitch11@gmail.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+package-mode = true
+packages = [{include = "trace_synthesizer"}]
+
+[[tool.poetry.source]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
+
+[tool.poetry.dependencies]
+python = ">=3.12"
+graphviz = "^0.20.3"
+cxxfilt = "^0.3.0"
+torch = { version = "~2.2.0", source = "pytorch-cpu" }
+gymnasium = "^1.0.0"
+numpy = ">=1.26,<2"
+matplotlib = "^3.10.8"
+tensorboard = "^2.20.0"
+setuptools = "<81"
+
+[tool.poetry.group.dev.dependencies]
+isort = "^7.0.0"
+black = "^25.12.0"
+pytest = "^8.3.0"
+jupyter = "^1.1.0"
+ipykernel = "^6.29.0"
+pandas = "^2.2.0"
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+known_first_party = ["trace_synthesizer"]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

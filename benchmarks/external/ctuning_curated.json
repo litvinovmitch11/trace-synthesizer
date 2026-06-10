@@ -1,0 +1,69 @@
+[
+  {
+    "id": "cbench-automotive-bitcount",
+    "description": "cBench bitcount; ``bit_count`` has a real CFG (``bitcount`` symbol is a degenerate single-block graph in LLVM output).",
+    "sources_relative": [
+      "program/cbench-automotive-bitcount/bitarray.c",
+      "program/cbench-automotive-bitcount/bitcnts.c",
+      "program/cbench-automotive-bitcount/bitcnt_1.c",
+      "program/cbench-automotive-bitcount/bitcnt_2.c",
+      "program/cbench-automotive-bitcount/bitcnt_3.c",
+      "program/cbench-automotive-bitcount/bitcnt_4.c",
+      "program/cbench-automotive-bitcount/bitfiles.c",
+      "program/cbench-automotive-bitcount/bitstrng.c",
+      "program/cbench-automotive-bitcount/bstr_i.c"
+    ],
+    "profile_argv": ["50000"],
+    "entry_func": "main",
+    "rollout_func": "bit_count",
+    "rollout_max_steps": 0
+  },
+  {
+    "id": "cbench-telecom-crc32",
+    "description": "CRC32 benchmark; training traces are collected for main1.",
+    "sources_relative": [
+      "program/cbench-telecom-crc32/crc_32.c",
+      "program/cbench-telecom-crc32/ctuning-rtl.c"
+    ],
+    "profile_data": {
+      "kind": "text_file",
+      "filename": "crc32_input.txt",
+      "content": "trace synthesizer crc32 input\n"
+    },
+    "entry_func": "main",
+    "rollout_func": "main1",
+    "rollout_max_steps": 0
+  },
+  {
+    "id": "cbench-security-sha",
+    "description": "SHA benchmark; training traces are collected for sha_stream.",
+    "sources_relative": [
+      "program/cbench-security-sha/sha.c",
+      "program/cbench-security-sha/sha_driver.c",
+      "program/cbench-security-sha/ctuning-rtl.c"
+    ],
+    "profile_data": {
+      "kind": "text_file",
+      "filename": "sha_input.txt",
+      "content": "The quick brown fox jumps over the lazy dog.\n"
+    },
+    "entry_func": "main",
+    "rollout_func": "sha_stream",
+    "rollout_max_steps": 0
+  },
+  {
+    "id": "cbench-network-dijkstra",
+    "description": "Dijkstra benchmark; training traces are collected for dijkstra.",
+    "sources_relative": [
+      "program/cbench-network-dijkstra/dijkstra_large.c"
+    ],
+    "profile_data": {
+      "kind": "text_file",
+      "filename": "dijkstra_input.txt",
+      "content": "4\n0 1 2 3\n1 0 1 2\n2 1 0 1\n3 2 1 0\n"
+    },
+    "entry_func": "main",
+    "rollout_func": "dijkstra",
+    "rollout_max_steps": 0
+  }
+]

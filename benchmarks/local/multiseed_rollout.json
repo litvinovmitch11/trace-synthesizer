@@ -1,0 +1,1119 @@
+{
+  "_meta": {
+    "mode": "rollout-only",
+    "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "episodes_per_rollout": 10,
+    "metric_keys": [
+      "block_visit_kl",
+      "edge_transition_kl",
+      "hot_path_ngram_overlap"
+    ],
+    "generated": "2026-06-06 14:12:45"
+  },
+  "trigger": {
+    "pgo": {
+      "1": {
+        "block_visit_kl": 2.084062355306231,
+        "edge_transition_kl": 2.6394704416263863,
+        "hot_path_ngram_overlap": 0.7352035658487271,
+        "mean_length": 9.9
+      },
+      "2": {
+        "block_visit_kl": 2.0969173157661998,
+        "edge_transition_kl": 2.638143244011549,
+        "hot_path_ngram_overlap": 0.7352035658487271,
+        "mean_length": 8.5
+      },
+      "3": {
+        "block_visit_kl": 2.0249597178248218,
+        "edge_transition_kl": 2.573786777466863,
+        "hot_path_ngram_overlap": 0.7444628251079864,
+        "mean_length": 10.8
+      },
+      "4": {
+        "block_visit_kl": 1.9931211371336879,
+        "edge_transition_kl": 2.546527147338431,
+        "hot_path_ngram_overlap": 0.7444628251079864,
+        "mean_length": 11.7
+      },
+      "5": {
+        "block_visit_kl": 2.056833002529951,
+        "edge_transition_kl": 2.6133232691100723,
+        "hot_path_ngram_overlap": 0.7444628251079864,
+        "mean_length": 9.4
+      }
+    },
+    "lstm": {
+      "1": {
+        "block_visit_kl": 5.539581241152999,
+        "edge_transition_kl": 7.654621638377081,
+        "hot_path_ngram_overlap": 0.31906534325889163,
+        "mean_length": 1500.0
+      },
+      "2": {
+        "block_visit_kl": 5.539581241152999,
+        "edge_transition_kl": 7.654621638377081,
+        "hot_path_ngram_overlap": 0.31906534325889163,
+        "mean_length": 1500.0
+      },
+      "3": {
+        "block_visit_kl": 5.539581241152999,
+        "edge_transition_kl": 7.654621638377081,
+        "hot_path_ngram_overlap": 0.31906534325889163,
+        "mean_length": 1500.0
+      },
+      "4": {
+        "block_visit_kl": 5.539581241152999,
+        "edge_transition_kl": 7.654621638377081,
+        "hot_path_ngram_overlap": 0.31906534325889163,
+        "mean_length": 1500.0
+      },
+      "5": {
+        "block_visit_kl": 5.539581241152999,
+        "edge_transition_kl": 7.654621638377081,
+        "hot_path_ngram_overlap": 0.31906534325889163,
+        "mean_length": 1500.0
+      }
+    },
+    "flat": {
+      "1": {
+        "block_visit_kl": 0.4082607025383234,
+        "edge_transition_kl": 0.5670966969947324,
+        "hot_path_ngram_overlap": 0.9907407407407408,
+        "mean_length": 84.8
+      },
+      "2": {
+        "block_visit_kl": 0.4064551757973043,
+        "edge_transition_kl": 0.5703563445099159,
+        "hot_path_ngram_overlap": 0.9907407407407408,
+        "mean_length": 95.4
+      },
+      "3": {
+        "block_visit_kl": 0.43471101906207704,
+        "edge_transition_kl": 0.6052786127203488,
+        "hot_path_ngram_overlap": 0.9907407407407408,
+        "mean_length": 88.2
+      },
+      "4": {
+        "block_visit_kl": 0.4559703540168399,
+        "edge_transition_kl": 0.6312235456753671,
+        "hot_path_ngram_overlap": 0.9907407407407408,
+        "mean_length": 81.2
+      },
+      "5": {
+        "block_visit_kl": 0.8096833871177067,
+        "edge_transition_kl": 1.3225636531123197,
+        "hot_path_ngram_overlap": 0.8958046135465491,
+        "mean_length": 53.9
+      }
+    },
+    "hrl": {
+      "1": {
+        "block_visit_kl": 0.03844420513438347,
+        "edge_transition_kl": 0.056442135984993876,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 1298.7
+      },
+      "2": {
+        "block_visit_kl": 0.04372895461539306,
+        "edge_transition_kl": 0.06299286777123866,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 1363.8
+      },
+      "3": {
+        "block_visit_kl": 0.04572860021227817,
+        "edge_transition_kl": 0.06525946187626548,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 1359.4
+      },
+      "4": {
+        "block_visit_kl": 0.040464881525747266,
+        "edge_transition_kl": 0.057586841474524884,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 1485.7
+      },
+      "5": {
+        "block_visit_kl": 0.04412252086071025,
+        "edge_transition_kl": 0.0628348901464914,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 1485.7
+      }
+    }
+  },
+  "diamond": {
+    "flat": {
+      "1": {
+        "block_visit_kl": 16.881446901632515,
+        "edge_transition_kl": 19.36921037034661,
+        "hot_path_ngram_overlap": 0.09365079365079365,
+        "mean_length": 3.0
+      },
+      "2": {
+        "block_visit_kl": 16.881446901632515,
+        "edge_transition_kl": 19.36921037034661,
+        "hot_path_ngram_overlap": 0.09365079365079365,
+        "mean_length": 3.0
+      },
+      "3": {
+        "block_visit_kl": 16.881446901632515,
+        "edge_transition_kl": 19.36921037034661,
+        "hot_path_ngram_overlap": 0.09365079365079365,
+        "mean_length": 3.0
+      },
+      "4": {
+        "block_visit_kl": 16.881446901632515,
+        "edge_transition_kl": 19.36921037034661,
+        "hot_path_ngram_overlap": 0.09365079365079365,
+        "mean_length": 3.0
+      },
+      "5": {
+        "block_visit_kl": 16.881446901632515,
+        "edge_transition_kl": 19.36921037034661,
+        "hot_path_ngram_overlap": 0.09365079365079365,
+        "mean_length": 3.0
+      }
+    },
+    "hrl": {
+      "1": {
+        "block_visit_kl": 0.03242217254364566,
+        "edge_transition_kl": 0.06491611994496607,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 604.2
+      },
+      "2": {
+        "block_visit_kl": 0.03176540881184526,
+        "edge_transition_kl": 0.06361575772838356,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 657.4
+      },
+      "3": {
+        "block_visit_kl": 0.03279218316021469,
+        "edge_transition_kl": 0.06563243600275412,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 673.4
+      },
+      "4": {
+        "block_visit_kl": 0.02975972737962988,
+        "edge_transition_kl": 0.05930967661016141,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 796.5
+      },
+      "5": {
+        "block_visit_kl": 0.030387156538468046,
+        "edge_transition_kl": 0.06055521137503847,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 803.5
+      }
+    }
+  },
+  "mutation": {
+    "pgo": {
+      "1": {
+        "block_visit_kl": 1.290388852346599,
+        "edge_transition_kl": 2.0506111144199815,
+        "hot_path_ngram_overlap": 0.7764107237791448,
+        "mean_length": 10.8
+      },
+      "2": {
+        "block_visit_kl": 1.2988277209731225,
+        "edge_transition_kl": 2.0599102030139536,
+        "hot_path_ngram_overlap": 0.7764107237791448,
+        "mean_length": 10.9
+      },
+      "3": {
+        "block_visit_kl": 1.2988277209731225,
+        "edge_transition_kl": 2.0599102030139536,
+        "hot_path_ngram_overlap": 0.7764107237791448,
+        "mean_length": 10.9
+      },
+      "4": {
+        "block_visit_kl": 0.919844324381716,
+        "edge_transition_kl": 1.373336528010523,
+        "hot_path_ngram_overlap": 0.8656109971899446,
+        "mean_length": 11.0
+      },
+      "5": {
+        "block_visit_kl": 0.858886191926973,
+        "edge_transition_kl": 1.2578787269649867,
+        "hot_path_ngram_overlap": 0.902027796764639,
+        "mean_length": 11.9
+      }
+    },
+    "lstm": {
+      "1": {
+        "block_visit_kl": 9.25574581631973,
+        "edge_transition_kl": 14.197482150049835,
+        "hot_path_ngram_overlap": 0.20980481506797297,
+        "mean_length": 2000.0
+      },
+      "2": {
+        "block_visit_kl": 9.25574581631973,
+        "edge_transition_kl": 14.197482150049835,
+        "hot_path_ngram_overlap": 0.20980481506797297,
+        "mean_length": 2000.0
+      },
+      "3": {
+        "block_visit_kl": 9.25574581631973,
+        "edge_transition_kl": 14.197482150049835,
+        "hot_path_ngram_overlap": 0.20980481506797297,
+        "mean_length": 2000.0
+      },
+      "4": {
+        "block_visit_kl": 9.25574581631973,
+        "edge_transition_kl": 14.197482150049835,
+        "hot_path_ngram_overlap": 0.20980481506797297,
+        "mean_length": 2000.0
+      },
+      "5": {
+        "block_visit_kl": 9.25574581631973,
+        "edge_transition_kl": 14.197482150049835,
+        "hot_path_ngram_overlap": 0.20980481506797297,
+        "mean_length": 2000.0
+      }
+    },
+    "flat": {
+      "1": {
+        "block_visit_kl": 0.26026042892483237,
+        "edge_transition_kl": 0.34355159492679266,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 39.5
+      },
+      "2": {
+        "block_visit_kl": 0.23683329091308702,
+        "edge_transition_kl": 0.3298525329647507,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 53.1
+      },
+      "3": {
+        "block_visit_kl": 0.23715985848730062,
+        "edge_transition_kl": 0.3299001243306619,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 53.3
+      },
+      "4": {
+        "block_visit_kl": 0.22472519517585443,
+        "edge_transition_kl": 0.31058915389821473,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 60.6
+      },
+      "5": {
+        "block_visit_kl": 0.21607100777353294,
+        "edge_transition_kl": 0.3039088169502866,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 60.4
+      }
+    },
+    "hrl": {
+      "1": {
+        "block_visit_kl": 17.39709288091128,
+        "edge_transition_kl": 19.226473009749498,
+        "hot_path_ngram_overlap": 0.06782106782106782,
+        "mean_length": 4.3
+      },
+      "2": {
+        "block_visit_kl": 17.37804468602984,
+        "edge_transition_kl": 19.20287110534731,
+        "hot_path_ngram_overlap": 0.06782106782106782,
+        "mean_length": 4.2
+      },
+      "3": {
+        "block_visit_kl": 17.37804468602984,
+        "edge_transition_kl": 19.20287110534731,
+        "hot_path_ngram_overlap": 0.06782106782106782,
+        "mean_length": 4.2
+      },
+      "4": {
+        "block_visit_kl": 17.37804468602984,
+        "edge_transition_kl": 19.20287110534731,
+        "hot_path_ngram_overlap": 0.06782106782106782,
+        "mean_length": 4.2
+      },
+      "5": {
+        "block_visit_kl": 17.358626600266934,
+        "edge_transition_kl": 19.178710568368775,
+        "hot_path_ngram_overlap": 0.06782106782106782,
+        "mean_length": 4.1
+      }
+    }
+  },
+  "sorting": {
+    "pgo": {
+      "1": {
+        "block_visit_kl": 0.9119475566250536,
+        "edge_transition_kl": 1.1084862183862272,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 21.0
+      },
+      "2": {
+        "block_visit_kl": 0.9164827117862983,
+        "edge_transition_kl": 1.11326063922938,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 21.1
+      },
+      "3": {
+        "block_visit_kl": 0.9164827117862983,
+        "edge_transition_kl": 1.11326063922938,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 21.1
+      },
+      "4": {
+        "block_visit_kl": 0.861355857441753,
+        "edge_transition_kl": 1.0074904994677236,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 19.0
+      },
+      "5": {
+        "block_visit_kl": 0.8256219449595855,
+        "edge_transition_kl": 1.0041267731847412,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 23.2
+      }
+    },
+    "lstm": {
+      "1": {
+        "block_visit_kl": 0.5586653440149946,
+        "edge_transition_kl": 0.8885540625760393,
+        "hot_path_ngram_overlap": 0.4150326797385621,
+        "mean_length": 2000.0
+      },
+      "2": {
+        "block_visit_kl": 0.5586653440149946,
+        "edge_transition_kl": 0.8885540625760393,
+        "hot_path_ngram_overlap": 0.4150326797385621,
+        "mean_length": 2000.0
+      },
+      "3": {
+        "block_visit_kl": 0.5586653440149946,
+        "edge_transition_kl": 0.8885540625760393,
+        "hot_path_ngram_overlap": 0.4150326797385621,
+        "mean_length": 2000.0
+      },
+      "4": {
+        "block_visit_kl": 0.5586653440149946,
+        "edge_transition_kl": 0.8885540625760393,
+        "hot_path_ngram_overlap": 0.4150326797385621,
+        "mean_length": 2000.0
+      },
+      "5": {
+        "block_visit_kl": 0.5586653440149946,
+        "edge_transition_kl": 0.8885540625760393,
+        "hot_path_ngram_overlap": 0.4150326797385621,
+        "mean_length": 2000.0
+      }
+    },
+    "flat": {
+      "1": {
+        "block_visit_kl": 0.028473772208467932,
+        "edge_transition_kl": 0.04647353493413856,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 1851.7
+      },
+      "2": {
+        "block_visit_kl": 0.029288079435763583,
+        "edge_transition_kl": 0.04644338125342297,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 1851.7
+      },
+      "3": {
+        "block_visit_kl": 0.03101446288588991,
+        "edge_transition_kl": 0.04816825970220768,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 1851.7
+      },
+      "4": {
+        "block_visit_kl": 0.03198229408231474,
+        "edge_transition_kl": 0.049191879423206,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 1851.7
+      },
+      "5": {
+        "block_visit_kl": 0.029337207806173892,
+        "edge_transition_kl": 0.04654757989449311,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 1851.7
+      }
+    },
+    "hrl": {
+      "1": {
+        "block_visit_kl": 0.01056778492363333,
+        "edge_transition_kl": 0.017375102142483334,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 1885.1
+      },
+      "2": {
+        "block_visit_kl": 0.013430580110618325,
+        "edge_transition_kl": 0.02166065699460112,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 1885.1
+      },
+      "3": {
+        "block_visit_kl": 0.012848232387930385,
+        "edge_transition_kl": 0.021307734240886285,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 1931.0
+      },
+      "4": {
+        "block_visit_kl": 0.012313394714798186,
+        "edge_transition_kl": 0.01999474057183594,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 1931.0
+      },
+      "5": {
+        "block_visit_kl": 0.014241260477549382,
+        "edge_transition_kl": 0.022878158400110274,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 1820.8
+      }
+    }
+  },
+  "smart": {
+    "pgo": {
+      "1": {
+        "block_visit_kl": 1.3161589875000443,
+        "edge_transition_kl": 1.2658062392778069,
+        "hot_path_ngram_overlap": 0.9203431372549019,
+        "mean_length": 4.4
+      },
+      "2": {
+        "block_visit_kl": 1.3563242411527707,
+        "edge_transition_kl": 1.3513804032530068,
+        "hot_path_ngram_overlap": 0.9203431372549019,
+        "mean_length": 4.8
+      },
+      "3": {
+        "block_visit_kl": 1.3563242411527707,
+        "edge_transition_kl": 1.3513804032530068,
+        "hot_path_ngram_overlap": 0.9203431372549019,
+        "mean_length": 4.8
+      },
+      "4": {
+        "block_visit_kl": 6.156225870835455,
+        "edge_transition_kl": 7.572202433011425,
+        "hot_path_ngram_overlap": 0.6096405228758169,
+        "mean_length": 3.7
+      },
+      "5": {
+        "block_visit_kl": 6.156225870835455,
+        "edge_transition_kl": 7.572202433011425,
+        "hot_path_ngram_overlap": 0.6096405228758169,
+        "mean_length": 3.7
+      }
+    },
+    "lstm": {
+      "1": {
+        "block_visit_kl": 2.14649802913925,
+        "edge_transition_kl": 4.207579831108381,
+        "hot_path_ngram_overlap": 0.6266339869281046,
+        "mean_length": 2000.0
+      },
+      "2": {
+        "block_visit_kl": 2.14649802913925,
+        "edge_transition_kl": 4.207579831108381,
+        "hot_path_ngram_overlap": 0.6266339869281046,
+        "mean_length": 2000.0
+      },
+      "3": {
+        "block_visit_kl": 2.14649802913925,
+        "edge_transition_kl": 4.207579831108381,
+        "hot_path_ngram_overlap": 0.6266339869281046,
+        "mean_length": 2000.0
+      },
+      "4": {
+        "block_visit_kl": 2.14649802913925,
+        "edge_transition_kl": 4.207579831108381,
+        "hot_path_ngram_overlap": 0.6266339869281046,
+        "mean_length": 2000.0
+      },
+      "5": {
+        "block_visit_kl": 2.14649802913925,
+        "edge_transition_kl": 4.207579831108381,
+        "hot_path_ngram_overlap": 0.6266339869281046,
+        "mean_length": 2000.0
+      }
+    },
+    "flat": {
+      "1": {
+        "block_visit_kl": 19.734119244956453,
+        "edge_transition_kl": 19.24807171673037,
+        "hot_path_ngram_overlap": 0.0,
+        "mean_length": 2.0
+      },
+      "2": {
+        "block_visit_kl": 19.734119244956453,
+        "edge_transition_kl": 19.24807171673037,
+        "hot_path_ngram_overlap": 0.0,
+        "mean_length": 2.0
+      },
+      "3": {
+        "block_visit_kl": 19.734119244956453,
+        "edge_transition_kl": 19.24807171673037,
+        "hot_path_ngram_overlap": 0.0,
+        "mean_length": 2.0
+      },
+      "4": {
+        "block_visit_kl": 19.734119244956453,
+        "edge_transition_kl": 19.24807171673037,
+        "hot_path_ngram_overlap": 0.0,
+        "mean_length": 2.0
+      },
+      "5": {
+        "block_visit_kl": 19.734119244956453,
+        "edge_transition_kl": 19.24807171673037,
+        "hot_path_ngram_overlap": 0.0,
+        "mean_length": 2.0
+      }
+    },
+    "hrl": {
+      "1": {
+        "block_visit_kl": 19.734119244956453,
+        "edge_transition_kl": 19.24807171673037,
+        "hot_path_ngram_overlap": 0.0,
+        "mean_length": 2.0
+      },
+      "2": {
+        "block_visit_kl": 19.734119244956453,
+        "edge_transition_kl": 19.24807171673037,
+        "hot_path_ngram_overlap": 0.0,
+        "mean_length": 2.0
+      },
+      "3": {
+        "block_visit_kl": 19.734119244956453,
+        "edge_transition_kl": 19.24807171673037,
+        "hot_path_ngram_overlap": 0.0,
+        "mean_length": 2.0
+      },
+      "4": {
+        "block_visit_kl": 19.734119244956453,
+        "edge_transition_kl": 19.24807171673037,
+        "hot_path_ngram_overlap": 0.0,
+        "mean_length": 2.0
+      },
+      "5": {
+        "block_visit_kl": 19.734119244956453,
+        "edge_transition_kl": 19.24807171673037,
+        "hot_path_ngram_overlap": 0.0,
+        "mean_length": 2.0
+      }
+    }
+  },
+  "opt": {
+    "pgo@O0": {
+      "1": {
+        "block_visit_kl": 0.5358183278980259,
+        "edge_transition_kl": 0.802385444581007,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 32.7
+      },
+      "2": {
+        "block_visit_kl": 0.5948568165511329,
+        "edge_transition_kl": 0.8409992625791065,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 31.3
+      },
+      "3": {
+        "block_visit_kl": 0.5432762737283293,
+        "edge_transition_kl": 0.7684626100022055,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 31.4
+      },
+      "4": {
+        "block_visit_kl": 0.5194983070003747,
+        "edge_transition_kl": 0.7213909573850316,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 30.5
+      },
+      "5": {
+        "block_visit_kl": 0.5256462346981186,
+        "edge_transition_kl": 0.7323491373037703,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 31.0
+      }
+    },
+    "pgo@O1": {
+      "1": {
+        "block_visit_kl": 0.145643153211503,
+        "edge_transition_kl": 0.18317578472314938,
+        "hot_path_ngram_overlap": 0.9087301587301587,
+        "mean_length": 427.7
+      },
+      "2": {
+        "block_visit_kl": 0.13941644754060714,
+        "edge_transition_kl": 0.1772120113536451,
+        "hot_path_ngram_overlap": 0.9087301587301587,
+        "mean_length": 394.1
+      },
+      "3": {
+        "block_visit_kl": 0.11239386123868099,
+        "edge_transition_kl": 0.14955647960172455,
+        "hot_path_ngram_overlap": 0.9087301587301587,
+        "mean_length": 403.3
+      },
+      "4": {
+        "block_visit_kl": 0.09779053419625898,
+        "edge_transition_kl": 0.1341254381125974,
+        "hot_path_ngram_overlap": 0.9087301587301587,
+        "mean_length": 366.0
+      },
+      "5": {
+        "block_visit_kl": 0.09189916322863984,
+        "edge_transition_kl": 0.12809589854366807,
+        "hot_path_ngram_overlap": 0.9087301587301587,
+        "mean_length": 342.8
+      }
+    },
+    "pgo@O2": {
+      "1": {
+        "block_visit_kl": 0.06288560926889014,
+        "edge_transition_kl": 0.09536439670710929,
+        "hot_path_ngram_overlap": 0.9437837453822109,
+        "mean_length": 571.5
+      },
+      "2": {
+        "block_visit_kl": 0.0585506901230281,
+        "edge_transition_kl": 0.09150352379940992,
+        "hot_path_ngram_overlap": 0.9437837453822109,
+        "mean_length": 543.3
+      },
+      "3": {
+        "block_visit_kl": 0.04602691223349441,
+        "edge_transition_kl": 0.07666500174237528,
+        "hot_path_ngram_overlap": 0.9641020176186417,
+        "mean_length": 527.6
+      },
+      "4": {
+        "block_visit_kl": 0.026448118776056167,
+        "edge_transition_kl": 0.056303917623486195,
+        "hot_path_ngram_overlap": 0.9641020176186417,
+        "mean_length": 545.9
+      },
+      "5": {
+        "block_visit_kl": 0.042731957122014906,
+        "edge_transition_kl": 0.07267008475528111,
+        "hot_path_ngram_overlap": 0.9641020176186417,
+        "mean_length": 609.1
+      }
+    },
+    "pgo@O3": {
+      "1": {
+        "block_visit_kl": 0.06288560926889014,
+        "edge_transition_kl": 0.09536439670710929,
+        "hot_path_ngram_overlap": 0.9437837453822109,
+        "mean_length": 571.5
+      },
+      "2": {
+        "block_visit_kl": 0.0585506901230281,
+        "edge_transition_kl": 0.09150352379940992,
+        "hot_path_ngram_overlap": 0.9437837453822109,
+        "mean_length": 543.3
+      },
+      "3": {
+        "block_visit_kl": 0.04602691223349441,
+        "edge_transition_kl": 0.07666500174237528,
+        "hot_path_ngram_overlap": 0.9641020176186417,
+        "mean_length": 527.6
+      },
+      "4": {
+        "block_visit_kl": 0.026448118776056167,
+        "edge_transition_kl": 0.056303917623486195,
+        "hot_path_ngram_overlap": 0.9641020176186417,
+        "mean_length": 545.9
+      },
+      "5": {
+        "block_visit_kl": 0.042731957122014906,
+        "edge_transition_kl": 0.07267008475528111,
+        "hot_path_ngram_overlap": 0.9641020176186417,
+        "mean_length": 609.1
+      }
+    },
+    "lstm@O0": {
+      "1": {
+        "block_visit_kl": 22.435435344997888,
+        "edge_transition_kl": 22.34784652604282,
+        "hot_path_ngram_overlap": 0.0831230224224906,
+        "mean_length": 2000.0
+      },
+      "2": {
+        "block_visit_kl": 22.435435344997888,
+        "edge_transition_kl": 22.34784652604282,
+        "hot_path_ngram_overlap": 0.0831230224224906,
+        "mean_length": 2000.0
+      },
+      "3": {
+        "block_visit_kl": 22.435435344997888,
+        "edge_transition_kl": 22.34784652604282,
+        "hot_path_ngram_overlap": 0.0831230224224906,
+        "mean_length": 2000.0
+      },
+      "4": {
+        "block_visit_kl": 22.435435344997888,
+        "edge_transition_kl": 22.34784652604282,
+        "hot_path_ngram_overlap": 0.0831230224224906,
+        "mean_length": 2000.0
+      },
+      "5": {
+        "block_visit_kl": 22.435435344997888,
+        "edge_transition_kl": 22.34784652604282,
+        "hot_path_ngram_overlap": 0.0831230224224906,
+        "mean_length": 2000.0
+      }
+    },
+    "lstm@O1": {
+      "1": {
+        "block_visit_kl": 26.197429909789392,
+        "edge_transition_kl": 26.036253447775174,
+        "hot_path_ngram_overlap": 0.03968253968253968,
+        "mean_length": 2000.0
+      },
+      "2": {
+        "block_visit_kl": 26.197429909789392,
+        "edge_transition_kl": 26.036253447775174,
+        "hot_path_ngram_overlap": 0.03968253968253968,
+        "mean_length": 2000.0
+      },
+      "3": {
+        "block_visit_kl": 26.197429909789392,
+        "edge_transition_kl": 26.036253447775174,
+        "hot_path_ngram_overlap": 0.03968253968253968,
+        "mean_length": 2000.0
+      },
+      "4": {
+        "block_visit_kl": 26.197429909789392,
+        "edge_transition_kl": 26.036253447775174,
+        "hot_path_ngram_overlap": 0.03968253968253968,
+        "mean_length": 2000.0
+      },
+      "5": {
+        "block_visit_kl": 26.197429909789392,
+        "edge_transition_kl": 26.036253447775174,
+        "hot_path_ngram_overlap": 0.03968253968253968,
+        "mean_length": 2000.0
+      }
+    },
+    "lstm@O2": {
+      "1": {
+        "block_visit_kl": 25.514701699042853,
+        "edge_transition_kl": 25.404752208308008,
+        "hot_path_ngram_overlap": 0.016666666666666666,
+        "mean_length": 2000.0
+      },
+      "2": {
+        "block_visit_kl": 25.514701699042853,
+        "edge_transition_kl": 25.404752208308008,
+        "hot_path_ngram_overlap": 0.016666666666666666,
+        "mean_length": 2000.0
+      },
+      "3": {
+        "block_visit_kl": 25.514701699042853,
+        "edge_transition_kl": 25.404752208308008,
+        "hot_path_ngram_overlap": 0.016666666666666666,
+        "mean_length": 2000.0
+      },
+      "4": {
+        "block_visit_kl": 25.514701699042853,
+        "edge_transition_kl": 25.404752208308008,
+        "hot_path_ngram_overlap": 0.016666666666666666,
+        "mean_length": 2000.0
+      },
+      "5": {
+        "block_visit_kl": 25.514701699042853,
+        "edge_transition_kl": 25.404752208308008,
+        "hot_path_ngram_overlap": 0.016666666666666666,
+        "mean_length": 2000.0
+      }
+    },
+    "lstm@O3": {
+      "1": {
+        "block_visit_kl": 25.514701699042853,
+        "edge_transition_kl": 25.404752208308008,
+        "hot_path_ngram_overlap": 0.016666666666666666,
+        "mean_length": 2000.0
+      },
+      "2": {
+        "block_visit_kl": 25.514701699042853,
+        "edge_transition_kl": 25.404752208308008,
+        "hot_path_ngram_overlap": 0.016666666666666666,
+        "mean_length": 2000.0
+      },
+      "3": {
+        "block_visit_kl": 25.514701699042853,
+        "edge_transition_kl": 25.404752208308008,
+        "hot_path_ngram_overlap": 0.016666666666666666,
+        "mean_length": 2000.0
+      },
+      "4": {
+        "block_visit_kl": 25.514701699042853,
+        "edge_transition_kl": 25.404752208308008,
+        "hot_path_ngram_overlap": 0.016666666666666666,
+        "mean_length": 2000.0
+      },
+      "5": {
+        "block_visit_kl": 25.514701699042853,
+        "edge_transition_kl": 25.404752208308008,
+        "hot_path_ngram_overlap": 0.016666666666666666,
+        "mean_length": 2000.0
+      }
+    },
+    "flat@O0": {
+      "1": {
+        "block_visit_kl": 0.3711777669270252,
+        "edge_transition_kl": 0.5403990962298839,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 55.0
+      },
+      "2": {
+        "block_visit_kl": 0.4213332082698598,
+        "edge_transition_kl": 0.6063791259886919,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 50.0
+      },
+      "3": {
+        "block_visit_kl": 0.423233661715222,
+        "edge_transition_kl": 0.6123617511032204,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 50.2
+      },
+      "4": {
+        "block_visit_kl": 0.35113557992180866,
+        "edge_transition_kl": 0.538329936761579,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 54.6
+      },
+      "5": {
+        "block_visit_kl": 0.35077231567057365,
+        "edge_transition_kl": 0.5339977386901422,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 57.3
+      }
+    },
+    "flat@O1": {
+      "1": {
+        "block_visit_kl": 3.195611247340902,
+        "edge_transition_kl": 4.840994954110476,
+        "hot_path_ngram_overlap": 0.6775793650793651,
+        "mean_length": 14.1
+      },
+      "2": {
+        "block_visit_kl": 3.205533447252518,
+        "edge_transition_kl": 4.802915730145677,
+        "hot_path_ngram_overlap": 0.6775793650793651,
+        "mean_length": 11.7
+      },
+      "3": {
+        "block_visit_kl": 1.53923805767618,
+        "edge_transition_kl": 2.65309025069379,
+        "hot_path_ngram_overlap": 0.8189484126984127,
+        "mean_length": 12.7
+      },
+      "4": {
+        "block_visit_kl": 1.516435735526091,
+        "edge_transition_kl": 2.6337893959278857,
+        "hot_path_ngram_overlap": 0.8189484126984127,
+        "mean_length": 13.1
+      },
+      "5": {
+        "block_visit_kl": 0.8730248381994024,
+        "edge_transition_kl": 1.4319851197249398,
+        "hot_path_ngram_overlap": 0.9360119047619048,
+        "mean_length": 13.6
+      }
+    },
+    "flat@O2": {
+      "1": {
+        "block_visit_kl": 0.685914139439011,
+        "edge_transition_kl": 0.9102285552110281,
+        "hot_path_ngram_overlap": 0.7802074452969593,
+        "mean_length": 19.7
+      },
+      "2": {
+        "block_visit_kl": 0.7681224158133875,
+        "edge_transition_kl": 0.9828500385498676,
+        "hot_path_ngram_overlap": 0.7018755328218244,
+        "mean_length": 14.2
+      },
+      "3": {
+        "block_visit_kl": 1.2631939330169075,
+        "edge_transition_kl": 3.215063241225825,
+        "hot_path_ngram_overlap": 0.6695723216822961,
+        "mean_length": 9.1
+      },
+      "4": {
+        "block_visit_kl": 0.9500957100334915,
+        "edge_transition_kl": 1.3761590837975468,
+        "hot_path_ngram_overlap": 0.7838022165387896,
+        "mean_length": 13.7
+      },
+      "5": {
+        "block_visit_kl": 0.9016083058752995,
+        "edge_transition_kl": 1.3028767589047432,
+        "hot_path_ngram_overlap": 0.7838022165387896,
+        "mean_length": 12.0
+      }
+    },
+    "flat@O3": {
+      "1": {
+        "block_visit_kl": 0.685914139439011,
+        "edge_transition_kl": 0.9102285552110281,
+        "hot_path_ngram_overlap": 0.7802074452969593,
+        "mean_length": 19.7
+      },
+      "2": {
+        "block_visit_kl": 0.7681224158133875,
+        "edge_transition_kl": 0.9828500385498676,
+        "hot_path_ngram_overlap": 0.7018755328218244,
+        "mean_length": 14.2
+      },
+      "3": {
+        "block_visit_kl": 1.2631939330169075,
+        "edge_transition_kl": 3.215063241225825,
+        "hot_path_ngram_overlap": 0.6695723216822961,
+        "mean_length": 9.1
+      },
+      "4": {
+        "block_visit_kl": 0.9500957100334915,
+        "edge_transition_kl": 1.3761590837975468,
+        "hot_path_ngram_overlap": 0.7838022165387896,
+        "mean_length": 13.7
+      },
+      "5": {
+        "block_visit_kl": 0.9016083058752995,
+        "edge_transition_kl": 1.3028767589047432,
+        "hot_path_ngram_overlap": 0.7838022165387896,
+        "mean_length": 12.0
+      }
+    },
+    "hrl@O0": {
+      "1": {
+        "block_visit_kl": 0.14256779076170423,
+        "edge_transition_kl": 0.15040113461265792,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 632.8
+      },
+      "2": {
+        "block_visit_kl": 0.22366267739100887,
+        "edge_transition_kl": 0.23334489990716017,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 699.9
+      },
+      "3": {
+        "block_visit_kl": 0.15902453194734661,
+        "edge_transition_kl": 0.1701400731695698,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 634.6
+      },
+      "4": {
+        "block_visit_kl": 0.21667154912156852,
+        "edge_transition_kl": 0.22615136204830288,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 672.2
+      },
+      "5": {
+        "block_visit_kl": 0.347138254527086,
+        "edge_transition_kl": 0.3597712708488028,
+        "hot_path_ngram_overlap": 1.0,
+        "mean_length": 716.7
+      }
+    },
+    "hrl@O1": {
+      "1": {
+        "block_visit_kl": 3.211164115279124,
+        "edge_transition_kl": 7.95072302954745,
+        "hot_path_ngram_overlap": 0.5967261904761905,
+        "mean_length": 61.7
+      },
+      "2": {
+        "block_visit_kl": 3.1887927980804034,
+        "edge_transition_kl": 13.09313430581123,
+        "hot_path_ngram_overlap": 0.5277777777777778,
+        "mean_length": 54.0
+      },
+      "3": {
+        "block_visit_kl": 3.177051010546677,
+        "edge_transition_kl": 7.843592903534974,
+        "hot_path_ngram_overlap": 0.5967261904761905,
+        "mean_length": 52.3
+      },
+      "4": {
+        "block_visit_kl": 3.1355500197621478,
+        "edge_transition_kl": 7.457241295734292,
+        "hot_path_ngram_overlap": 0.6190476190476191,
+        "mean_length": 43.5
+      },
+      "5": {
+        "block_visit_kl": 3.138449976865922,
+        "edge_transition_kl": 7.467460545751351,
+        "hot_path_ngram_overlap": 0.6190476190476191,
+        "mean_length": 45.6
+      }
+    },
+    "hrl@O2": {
+      "1": {
+        "block_visit_kl": 5.7661907011930085,
+        "edge_transition_kl": 12.574635594263247,
+        "hot_path_ngram_overlap": 0.6050227337311737,
+        "mean_length": 34.3
+      },
+      "2": {
+        "block_visit_kl": 5.850351648137501,
+        "edge_transition_kl": 12.593518220189234,
+        "hot_path_ngram_overlap": 0.6050227337311737,
+        "mean_length": 34.3
+      },
+      "3": {
+        "block_visit_kl": 6.065834187164645,
+        "edge_transition_kl": 12.736729976542499,
+        "hot_path_ngram_overlap": 0.6050227337311737,
+        "mean_length": 39.1
+      },
+      "4": {
+        "block_visit_kl": 5.95137571891572,
+        "edge_transition_kl": 12.70693492244408,
+        "hot_path_ngram_overlap": 0.6188050582551862,
+        "mean_length": 38.9
+      },
+      "5": {
+        "block_visit_kl": 6.124288516678371,
+        "edge_transition_kl": 13.032511240935515,
+        "hot_path_ngram_overlap": 0.5763711281614096,
+        "mean_length": 42.0
+      }
+    },
+    "hrl@O3": {
+      "1": {
+        "block_visit_kl": 5.7661907011930085,
+        "edge_transition_kl": 12.574635594263247,
+        "hot_path_ngram_overlap": 0.6050227337311737,
+        "mean_length": 34.3
+      },
+      "2": {
+        "block_visit_kl": 5.845207862899247,
+        "edge_transition_kl": 12.590947640978767,
+        "hot_path_ngram_overlap": 0.6050227337311737,
+        "mean_length": 34.1
+      },
+      "3": {
+        "block_visit_kl": 6.027294937385637,
+        "edge_transition_kl": 12.694539267856817,
+        "hot_path_ngram_overlap": 0.6050227337311737,
+        "mean_length": 37.3
+      },
+      "4": {
+        "block_visit_kl": 6.07275856416464,
+        "edge_transition_kl": 12.743256574184109,
+        "hot_path_ngram_overlap": 0.6188050582551862,
+        "mean_length": 39.5
+      },
+      "5": {
+        "block_visit_kl": 6.128600508286159,
+        "edge_transition_kl": 13.037261843687922,
+        "hot_path_ngram_overlap": 0.5763711281614096,
+        "mean_length": 42.2
+      }
+    }
+  }
+}
